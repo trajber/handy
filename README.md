@@ -17,11 +17,11 @@ You just need to embed handy.DefaultHandler in your structure:
 Override the HTTP verb:
 
 	func (h *MyHandler) Get(ctx *handy.Context) {
-		ctx.ResponseWriter.Write([]byte("Hello World - GET called"))
+		ctx.ResponseWriter.Write([]byte("Hello World - GET"))
 	}
 
 	func (h *MyHandler) Post(ctx *handy.Context) {
-		ctx.ResponseWriter.Write([]byte("Hello World - POST called"))
+		ctx.ResponseWriter.Write([]byte("Hello World - POST"))
 	}
 
 And...
@@ -70,3 +70,45 @@ And you can read them using the Context:
 		...
 		fmt.Println(http.ListenAndServe(":8080", srv))
 }
+
+## All together:
+
+	package main
+
+	import (
+		"fmt"
+		"handy"
+		"net/http"
+	)
+
+	type MyHandler struct {
+		handy.DefaultHandler
+	}
+
+	func (h *MyHandler) Get(ctx *handy.Context) {
+		ctx.ResponseWriter.Write([]byte("Hello World - GET"))
+	}
+
+	func (h *MyHandler) Post(ctx *handy.Context) {
+		ctx.ResponseWriter.Write([]byte("Hello World - POST"))
+	}
+	
+
+
+	func BeforeFilter(ctx *handy.Context) error {
+		fmt.Printf("Hello %s\n", ctx.Request.RemoteAddr)
+		return nil
+	}
+
+	func AfterFilter(ctx *handy.Context) error {
+		fmt.Printf("Bye %s. x variable=%s\n", ctx.Request.RemoteAddr, ctx.GetVar("x"))
+		return nil
+	}
+
+	func main() {
+		srv := handy.NewHandy()
+		srv.BeforeFilter(BeforeFilter)
+		srv.AfterFilter(AfterFilter)
+		srv.HandleService("/hello/{x}", new(MyHandler))
+		fmt.Println(http.ListenAndServe(":8080", srv))
+	}
