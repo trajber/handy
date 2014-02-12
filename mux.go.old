@@ -1,0 +1,103 @@
+package mux
+
+import (
+	"net/http"
+	"sync"
+)
+
+type Router struct {
+	mu                sync.RWMutex
+	path              *Path
+	beforeFilter      Filter
+	afterFilter       Filter
+	handleFilterError FilterError
+	currentClients    int
+}
+
+type Filter func(ctx *Context) error
+type FilterError func(ctx *Context, err error)
+
+func NewRouter() *Router {
+	router := new(Router)
+	router.path = NewPath()
+	return router
+}
+
+func (router *Router) Handle(pattern string, handler http.Handler) {
+	router.mu.Lock()
+	defer router.mu.Unlock()
+
+	s := new(service.DefaultService)
+	s.Handler = handler
+	if ok := router.router.AppendRoute(pattern, s); !ok {
+		panic("Cannot append route")
+	}
+}
+
+func (router *Router) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	router.Handle(pattern, http.HandlerFunc(handler))
+}
+
+func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	router.mu.RLock()
+	defer router.mu.RUnlock()
+
+	router.currentClients++
+	defer func() {
+		router.currentClients--
+	}()
+
+	route, err := router.path.FindRoute(r.URL.Path)
+	if err != nil {
+		http.Error(w, "", http.StatusServiceUnavailable)
+		return
+	}
+
+	ctx := newContext()
+	ctx.Request = r
+	ctx.ResponseWriter = w
+
+	var s Service
+	var statusCode int
+
+	if router.beforeFilter != nil {
+		if err := router.beforeFilter(resWriter, req); err != nil {
+			if router.handleFilterError != nil {
+				router.handleFilterError(resWriter, req, err)
+			}
+			return
+		}
+	}
+
+	s, statusCode = filter(route, req, router.secretRetriever)
+	if statusCode > 0 {
+		resWriter.WriteHeader(statusCode)
+		if router.accessDeniedHandler != nil {
+			router.accessDeniedHandler(req)
+		}
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		s.Get(resWriter, req)
+	case "POST":
+		s.Post(resWriter, req)
+	case "PUT":
+		s.Put(resWriter, req)
+	case "DELETE":
+		s.Delete(resWriter, req)
+	case "PATCH":
+		s.Patch(resWriter, req)
+	default:
+		http.Error(w, "", http.StatusMethodNotAllowed)
+	}
+
+	if router.afterFilter != nil {
+		if err := router.afterFilter(resWriter, req); err != nil {
+			if router.handleFilterError != nil {
+				router.handleFilterError(resWriter, req, err)
+			}
+		}
+	}
+}
