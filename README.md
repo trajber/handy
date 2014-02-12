@@ -93,15 +93,15 @@ And you can read them using the Context:
 		ctx.ResponseWriter.Write([]byte("Hello World - POST"))
 	}
 	
-
-
 	func BeforeFilter(ctx *handy.Context) error {
 		fmt.Printf("Hello %s\n", ctx.Request.RemoteAddr)
 		return nil
 	}
 
 	func AfterFilter(ctx *handy.Context) error {
-		fmt.Printf("Bye %s. x variable=%s\n", ctx.Request.RemoteAddr, ctx.GetVar("x"))
+		fmt.Printf("Bye %s. foo variable=%s\n", 
+			ctx.Request.RemoteAddr, 
+			ctx.GetVar("foo"))
 		return nil
 	}
 
@@ -109,6 +109,6 @@ And you can read them using the Context:
 		srv := handy.NewHandy()
 		srv.BeforeFilter(BeforeFilter)
 		srv.AfterFilter(AfterFilter)
-		srv.HandleService("/hello/{x}", new(MyHandler))
+		srv.HandleService("/hello/{foo}", new(MyHandler))
 		fmt.Println(http.ListenAndServe(":8080", srv))
 	}
