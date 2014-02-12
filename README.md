@@ -16,7 +16,11 @@ You just need to embed handy.DefaultHandler in your structure:
 Now, override the HTTP verb:
 
 	func (h *MyHandler) Get(ctx *handy.Context) {
-		ctx.ResponseWriter.Write([]byte("Hello World"))
+		ctx.ResponseWriter.Write([]byte("Hello World - GET called"))
+	}
+
+	func (h *MyHandler) Post(ctx *handy.Context) {
+		ctx.ResponseWriter.Write([]byte("Hello World - POST called"))
 	}
 
 And...
