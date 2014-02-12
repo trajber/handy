@@ -1,10 +1,10 @@
-package mux
+package handy
 
 import (
 	"net/http"
 )
 
-type Service interface {
+type Handler interface {
 	Get(ctx *Context)
 	Post(ctx *Context)
 	Put(ctx *Context)
@@ -12,11 +12,11 @@ type Service interface {
 	Patch(ctx *Context)
 }
 
-type DefaultService struct {
+type DefaultHandler struct {
 	Handler http.Handler
 }
 
-func (s *DefaultService) defaultHandler(ctx *Context) {
+func (s *DefaultHandler) defaultHandler(ctx *Context) {
 	if s.Handler != nil {
 		s.Handler.ServeHTTP(ctx.ResponseWriter, ctx.Request)
 	} else {
@@ -24,22 +24,22 @@ func (s *DefaultService) defaultHandler(ctx *Context) {
 	}
 }
 
-func (s *DefaultService) Get(ctx *Context) {
+func (s *DefaultHandler) Get(ctx *Context) {
 	s.defaultHandler(ctx)
 }
 
-func (s *DefaultService) Post(ctx *Context) {
+func (s *DefaultHandler) Post(ctx *Context) {
 	s.defaultHandler(ctx)
 }
 
-func (s *DefaultService) Put(ctx *Context) {
+func (s *DefaultHandler) Put(ctx *Context) {
 	s.defaultHandler(ctx)
 }
 
-func (s *DefaultService) Delete(ctx *Context) {
+func (s *DefaultHandler) Delete(ctx *Context) {
 	s.defaultHandler(ctx)
 }
 
-func (s *DefaultService) Patch(ctx *Context) {
+func (s *DefaultHandler) Patch(ctx *Context) {
 	s.defaultHandler(ctx)
 }

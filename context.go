@@ -1,4 +1,4 @@
-package mux
+package handy
 
 import (
 	"net/http"

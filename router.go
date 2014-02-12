@@ -1,32 +1,34 @@
-package mux
+package handy
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
 var (
-	ErrRouteNotFound = errors.New("Path not found")
+	ErrRouteNotFound      = errors.New("Router not found")
+	ErrRouteAlreadyExists = errors.New("Route already exists")
+	ErrCannotAppendRoute  = errors.New("Cannot append route")
+	ErrOnlyOneWildcard    = errors.New("Only one wildcard is allowed in this level")
 )
 
 type node struct {
 	name             string
+	handler          Handler
 	isWildcard       bool
 	hasChildWildcard bool
 	parent           *node
 	children         map[string]*node
-	services         []Service
 	wildcardName     string
 }
 
-type Path struct {
+type Router struct {
 	root    *node
 	current *node
 }
 
-func NewPath() *Path {
-	r := new(Path)
+func NewRouter() *Router {
+	r := new(Router)
 	root := new(node)
 	root.children = make(map[string]*node)
 	r.root = root
@@ -42,7 +44,7 @@ func cleanWildcard(l string) string {
 	return l[1 : len(l)-1]
 }
 
-func (r *Path) nodeExists(n string) (*node, bool) {
+func (r *Router) nodeExists(n string) (*node, bool) {
 	v, ok := r.current.children[n]
 	if !ok && r.current.hasChildWildcard {
 		// looking for wildcard
@@ -52,43 +54,57 @@ func (r *Path) nodeExists(n string) (*node, bool) {
 	return v, ok
 }
 
-func (r *Path) AppendRoute(uri string, s Service) bool {
+func (r *Router) AppendRoute(uri string, h Handler) error {
+	uri = strings.TrimSpace(uri)
+
 	appended := false
-	for _, v := range strings.Split(uri, "/") {
-		if len(v) > 0 {
-			if n, ok := r.nodeExists(v); ok {
-				r.current = n
-				appended = true
-				continue
+	tokens := strings.Split(uri, "/")
+	for k, v := range tokens {
+		if v == "" {
+			continue
+		}
+
+		if n, ok := r.nodeExists(v); ok {
+			if len(tokens)-1 == k {
+				return ErrRouteAlreadyExists
 			}
 
-			n := new(node)
-			n.children = make(map[string]*node)
-
-			// only one child wildcard per node
-			if isWildcard(v) {
-				if r.current.hasChildWildcard {
-					return false
-				}
-				n.isWildcard = true
-				r.current.wildcardName = v
-				r.current.hasChildWildcard = true
-			}
-
-			n.name = v
-			n.parent = r.current
-			r.current.children[n.name] = n
 			r.current = n
 			appended = true
+			continue
 		}
+
+		n := new(node)
+		n.children = make(map[string]*node)
+
+		// only one child wildcard per node
+		if isWildcard(v) {
+			if r.current.hasChildWildcard {
+				return ErrOnlyOneWildcard
+			}
+
+			n.isWildcard = true
+			r.current.wildcardName = v
+			r.current.hasChildWildcard = true
+		}
+
+		n.name = v
+		n.parent = r.current
+		r.current.children[n.name] = n
+		r.current = n
+		appended = true
 	}
 
 	if r.current != r.root {
-		r.current.services = append(r.current.services, s)
+		r.current.handler = h
 		r.current = r.root // reset
 	}
 
-	return appended
+	if appended == false {
+		return ErrCannotAppendRoute
+	}
+
+	return nil
 
 }
 
@@ -102,40 +118,39 @@ func (n *node) findChild(name string) *node {
 	return v
 }
 
-type Route struct {
-	Route      string
-	URIVars    map[string]string
-	Services   []Service
-	Restricted bool
+type RouteMatch struct {
+	URIVars map[string]string
+	Handler Handler
 }
 
 // This method rebuilds a route based on a given URI
-func (r *Path) FindRoute(uri string) (Route, error) {
-	rt := Route{}
+func (r *Router) FindRoute(uri string) (*RouteMatch, error) {
+	rt := new(RouteMatch)
 	rt.URIVars = make(map[string]string)
 
 	current := r.current
 	for _, v := range strings.Split(uri, "/") {
 		v = strings.TrimSpace(v)
-		if len(v) > 0 {
-			n := current.findChild(v)
-			if n == nil {
-				return rt, ErrRouteNotFound
-			}
-
-			if n.isWildcard {
-				rt.URIVars[cleanWildcard(n.name)] = v
-			}
-
-			rt.Route = fmt.Sprintf("%s/%s", rt.Route, n.name)
-			current = n
+		if v == "" {
+			continue
 		}
+
+		n := current.findChild(v)
+		if n == nil {
+			return rt, ErrRouteNotFound
+		}
+
+		if n.isWildcard {
+			rt.URIVars[cleanWildcard(n.name)] = v
+		}
+
+		current = n
 	}
 
-	if len(current.services) == 0 {
+	if current.handler == nil {
 		return rt, ErrRouteNotFound
 	}
 
-	rt.Services = current.services
+	rt.Handler = current.handler
 	return rt, nil
 }
