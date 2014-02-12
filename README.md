@@ -1,8 +1,8 @@
-Handy - 
+Handy
 ==========================================
 
-Handy is a fast and simple HTTP multiplex for Golang. It implements a request
-router that matches incoming requests against a pre-registered Handlers. These
+Handy is a fast and simple HTTP multiplexer for Golang. It implements a request
+router that matches incoming requests against pre-registered Handlers. These
 Handlers has methods for each HTTP verb. Registered paths can also have
 variables.
 
