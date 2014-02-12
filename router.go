@@ -124,7 +124,7 @@ type RouteMatch struct {
 }
 
 // This method rebuilds a route based on a given URI
-func (r *Router) FindRoute(uri string) (*RouteMatch, error) {
+func (r *Router) Match(uri string) (*RouteMatch, error) {
 	rt := new(RouteMatch)
 	rt.URIVars = make(map[string]string)
 

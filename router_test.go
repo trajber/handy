@@ -25,14 +25,13 @@ func TestAppendWildCard(t *testing.T) {
 func TestFindRoute(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	t.Log(h)
 	err := rt.AppendRoute("/test", h)
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.FindRoute("/test")
+	route, err := rt.Match("/test")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
 	}
@@ -40,17 +39,16 @@ func TestFindRoute(t *testing.T) {
 	t.Log(route.URIVars)
 }
 
-func TestFindRouteWithWildcard(t *testing.T) {
+func TestMatchWithWildcard(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	t.Log(h)
 	err := rt.AppendRoute("/test/{x}", h)
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.FindRoute("/test/foo")
+	route, err := rt.Match("/test/foo")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
 	}
@@ -61,7 +59,6 @@ func TestFindRouteWithWildcard(t *testing.T) {
 func TestAppendSameRoute(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	t.Log(h)
 	err := rt.AppendRoute("/test", h)
 
 	if err != nil {
@@ -78,14 +75,13 @@ func TestAppendSameRoute(t *testing.T) {
 func TestMultipleWildCards(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	t.Log(h)
 	err := rt.AppendRoute("/test/{x}/{y}", h)
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.FindRoute("/test/foo/bar")
+	route, err := rt.Match("/test/foo/bar")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
 	}
