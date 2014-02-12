@@ -48,7 +48,7 @@ Path variables must be enclosed by braces.
 And you can read them using the Context:
 
 	func (h *MyHandler) Get(ctx *handy.Context) {
-		ctx.GetVar("foo")
+		foo := ctx.GetVar("foo")
 		...
 	}
 
