@@ -57,9 +57,7 @@ And you can read them using the Context:
 	}
 
 	func AfterFilter(ctx *handy.Context) error {
-		fmt.Printf("Bye %s. x variable=%s\n", 
-		ctx.Request.RemoteAddr, 
-		ctx.GetVar("x"))
+		fmt.Printf("Bye %s.\n", ctx.GetVar("x"))
 		return nil
 	}
 
