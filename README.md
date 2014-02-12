@@ -1,10 +1,11 @@
 Handy
 ==========================================
 
-Handy is a fast and simple HTTP multiplexer for Golang. It implements a request
-router that matches incoming requests against pre-registered Handlers. These
-Handlers has methods for each HTTP verb. Registered paths can also have
-variables.
+Handy is a fast and simple HTTP multiplexer for Golang. It fills two gaps
+related to the default Golang's HTTP multiplexer:
+
+	* URI variable support (eg: "/test/{foo}")
+	* Pre and post filters
 
 ## Creating a Handler
 You just need to embed handy.DefaultHandler in your structure:
@@ -13,7 +14,7 @@ You just need to embed handy.DefaultHandler in your structure:
 		handy.DefaultHandler
 	}
 
-Now, override the HTTP verb:
+Override the HTTP verb:
 
 	func (h *MyHandler) Get(ctx *handy.Context) {
 		ctx.ResponseWriter.Write([]byte("Hello World - GET called"))
