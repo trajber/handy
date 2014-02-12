@@ -38,6 +38,15 @@ func (handy *Handy) HandleFunc(pattern string, handler func(http.ResponseWriter,
 	handy.Handle(pattern, http.HandlerFunc(handler))
 }
 
+func (handy *Handy) HandleService(pattern string, h Handler) {
+	handy.mu.Lock()
+	defer handy.mu.Unlock()
+
+	if err := handy.router.AppendRoute(pattern, h); err != nil {
+		panic("Cannot append route;" + err.Error())
+	}
+}
+
 func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handy.mu.RLock()
 	defer handy.mu.RUnlock()
