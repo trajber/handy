@@ -46,6 +46,7 @@ Path variables must be enclosed by braces.
 	srv.HandleService("/hello/{foo}", new(MyHandler))
 
 And you can read them using the Context:
+
 	func (h *MyHandler) Get(ctx *handy.Context) {
 		ctx.GetVar("foo")
 		...
