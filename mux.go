@@ -101,3 +101,15 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func (handy *Handy) BeforeFilter(f Filter) {
+	handy.beforeFilter = f
+}
+
+func (handy *Handy) AfterFilter(f Filter) {
+	handy.afterFilter = f
+}
+
+func (handy *Handy) HandleFilterError(f FilterError) {
+	handy.handleFilterError = f
+}
