@@ -12,7 +12,6 @@ type Context struct {
 
 func newContext() *Context {
 	ctx := new(Context)
-	ctx.vars = make(map[string]string)
 	return ctx
 }
 
