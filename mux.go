@@ -2,6 +2,7 @@ package handy
 
 import (
 	"net/http"
+	"reflect"
 	"sync"
 )
 
@@ -24,21 +25,24 @@ func NewHandy() *Handy {
 }
 
 func (handy *Handy) Handle(pattern string, handler http.Handler) {
-	handy.mu.Lock()
-	defer handy.mu.Unlock()
+	// handy.mu.Lock()
+	// defer handy.mu.Unlock()
 
-	s := new(DefaultHandler)
-	s.Handler = handler
-	if err := handy.router.AppendRoute(pattern, s); err != nil {
-		panic("Cannot append route:" + err.Error())
-	}
+	// s := new(DefaultHandler)
+	// s.Handler = handler
+	// if err := handy.router.AppendRoute(pattern, s); err != nil {
+	// 	panic("Cannot append route:" + err.Error())
+	// }
 }
 
-func (handy *Handy) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+func (handy *Handy) HandleFunc(pattern string,
+	handler func(http.ResponseWriter, *http.Request)) {
 	handy.Handle(pattern, http.HandlerFunc(handler))
 }
 
-func (handy *Handy) HandleService(pattern string, h Handler) {
+func (handy *Handy) HandleService(
+	pattern string,
+	h func(ctx *Context) Handler) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
@@ -62,8 +66,6 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h := route.Handler
-
 	ctx := newContext()
 	ctx.Request = r
 	ctx.ResponseWriter = w
@@ -78,17 +80,31 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	f := route.Handler
+	h := f(ctx)
+
+	var code int
+
 	switch r.Method {
 	case "GET":
-		h.Get(ctx)
+		code, err = h.Get(ctx)
+		ctx.ResponseWriter.WriteHeader(code)
+		st := reflect.ValueOf(h).Elem()
+		for i := 0; i < st.NumField(); i++ {
+			field := st.Type().Field(i)
+			value := field.Tag.Get("get")
+			if value == "response" {
+				ctx.Marshal(st.Field(i).Interface())
+			}
+		}
 	case "POST":
-		h.Post(ctx)
+		code, err = h.Post(ctx)
 	case "PUT":
-		h.Put(ctx)
+		code, err = h.Put(ctx)
 	case "DELETE":
-		h.Delete(ctx)
+		code, err = h.Delete(ctx)
 	case "PATCH":
-		h.Patch(ctx)
+		code, err = h.Patch(ctx)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
