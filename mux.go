@@ -81,29 +81,28 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f := route.Handler
 	h := f(ctx)
 
-	dec := h.getDecoder()
-	dec.Intercept(ctx, h)
+	h.Decode(ctx, h)
 
-	var code int
+	for _, i := range h.Interceptors() {
+		i.Intercept(ctx, h)
+	}
 
 	switch r.Method {
 	case "GET":
-		code, err = h.Get(ctx)
-		ctx.ResponseWriter.WriteHeader(code)
+		h.Get(ctx)
 	case "POST":
-		code, err = h.Post(ctx)
+		h.Post(ctx)
 	case "PUT":
-		code, err = h.Put(ctx)
+		h.Put(ctx)
 	case "DELETE":
-		code, err = h.Delete(ctx)
+		h.Delete(ctx)
 	case "PATCH":
-		code, err = h.Patch(ctx)
+		h.Patch(ctx)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 
-	enc := h.getEncoder()
-	enc.Intercept(ctx, h)
+	h.Encode(ctx, h)
 
 	if handy.afterFilter != nil {
 		if err := handy.afterFilter(ctx); err != nil {
