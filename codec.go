@@ -2,23 +2,26 @@ package handy
 
 import (
 	"encoding/json"
+	"net/http"
 	"reflect"
 	"strconv"
 )
 
 type Codec interface {
-	Encode(ctx *Context, h Handler)
-	Decode(ctx *Context, h Handler)
+	Encode(http.ResponseWriter, *http.Request, Handler)
+	Decode(http.ResponseWriter, *http.Request, Handler)
 }
 
 type NoOpCodec struct{}
 
-func (c *NoOpCodec) Encode(ctx *Context, h Handler) {}
-func (c *NoOpCodec) Decode(ctx *Context, h Handler) {}
+func (c *NoOpCodec) Encode(http.ResponseWriter, *http.Request, Handler) {}
+func (c *NoOpCodec) Decode(http.ResponseWriter, *http.Request, Handler) {}
 
-type ParamCodec struct{}
+type ParamCodec struct {
+	URIParams map[string]string
+}
 
-func (c *ParamCodec) Decode(ctx *Context, h Handler) {
+func (c *ParamCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 	st := reflect.ValueOf(h).Elem()
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
@@ -28,8 +31,8 @@ func (c *ParamCodec) Decode(ctx *Context, h Handler) {
 			continue
 		}
 
-		v := ctx.GetVar(value)
-		if v == "" {
+		v, ok := c.URIParams[value]
+		if !ok {
 			continue
 		}
 
@@ -46,30 +49,27 @@ func (c *ParamCodec) Decode(ctx *Context, h Handler) {
 	}
 }
 
-type JSONCodec struct {
-	ParamCodec
-}
+type JSONCodec struct{}
 
-func (c *JSONCodec) Encode(ctx *Context, h Handler) {
+func (c *JSONCodec) Encode(w http.ResponseWriter, r *http.Request, h Handler) {
 	st := reflect.ValueOf(h).Elem()
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
 		value := field.Tag.Get("codec")
 		if value == "response" {
-			encoder := json.NewEncoder(ctx.ResponseWriter)
+			encoder := json.NewEncoder(w)
 			encoder.Encode(st.Field(i).Interface())
 		}
 	}
 }
 
-func (c *JSONCodec) Decode(ctx *Context, h Handler) {
-	c.ParamCodec.Decode(ctx, h)
+func (c *JSONCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 	st := reflect.ValueOf(h).Elem()
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
 		value := field.Tag.Get("codec")
 		if value == "request" {
-			decoder := json.NewDecoder(ctx.Request.Body)
+			decoder := json.NewDecoder(r.Body)
 			decoder.Decode(st.Field(i).Interface())
 		}
 	}

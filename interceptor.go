@@ -1,13 +1,17 @@
 package handy
 
+import "net/http"
+
 type Interceptor interface {
-	Intercept(ctx *Context, h Handler)
+	Intercept(w http.ResponseWriter, r *http.Request, h Handler)
 }
 
-type InterceptorFunc func(*Context, Handler)
+type InterceptorFunc func(w http.ResponseWriter, r *http.Request, h Handler)
 
-func (f InterceptorFunc) Intercept(ctx *Context, h Handler) {
-	f(ctx, h)
+func (f InterceptorFunc) Intercept(w http.ResponseWriter,
+	r *http.Request,
+	h Handler) {
+	f(w, r, h)
 }
 
 type InterceptorChain interface {
@@ -22,6 +26,10 @@ func (f *InterceptorFunc) Interceptors() []Interceptor {
 
 type NoOpInterceptorChain struct{}
 
-func (n *NoOpInterceptorChain) Interceptors() []Interceptor {
+func (n *NoOpInterceptorChain) Before() []Interceptor {
+	return nil
+}
+
+func (n *NoOpInterceptorChain) After() []Interceptor {
 	return nil
 }

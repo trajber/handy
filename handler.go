@@ -3,14 +3,15 @@ package handy
 import "net/http"
 
 type Handler interface {
-	Get(ctx *Context)
-	Post(ctx *Context)
-	Put(ctx *Context)
-	Delete(ctx *Context)
-	Patch(ctx *Context)
-	Decode(*Context, Handler)
-	Encode(*Context, Handler)
-	Interceptors() []Interceptor
+	Get(http.ResponseWriter, *http.Request)
+	Post(http.ResponseWriter, *http.Request)
+	Put(http.ResponseWriter, *http.Request)
+	Delete(http.ResponseWriter, *http.Request)
+	Patch(http.ResponseWriter, *http.Request)
+	Decode(http.ResponseWriter, *http.Request, Handler)
+	Encode(http.ResponseWriter, *http.Request, Handler)
+	Before() []Interceptor
+	After() []Interceptor
 }
 
 type DefaultHandler struct {
@@ -19,35 +20,30 @@ type DefaultHandler struct {
 	NoOpInterceptorChain
 }
 
-func (s *DefaultHandler) defaultHandler(ctx *Context) {
+func (s *DefaultHandler) defaultHandler(w http.ResponseWriter, r *http.Request) {
 	if s.Handler != nil {
-		s.ServeHTTP(ctx.ResponseWriter, ctx.Request)
+		s.ServeHTTP(w, r)
 	} else {
-		ctx.ResponseWriter.WriteHeader(http.StatusNotImplemented)
+		w.WriteHeader(http.StatusNotImplemented)
 	}
 }
 
-func (s *DefaultHandler) Get(ctx *Context) {
-	s.defaultHandler(ctx)
+func (s *DefaultHandler) Get(w http.ResponseWriter, r *http.Request) {
+	s.defaultHandler(w, r)
 }
 
-func (s *DefaultHandler) Post(ctx *Context) {
-	s.defaultHandler(ctx)
+func (s *DefaultHandler) Post(w http.ResponseWriter, r *http.Request) {
+	s.defaultHandler(w, r)
 }
 
-func (s *DefaultHandler) Put(ctx *Context) {
-	s.defaultHandler(ctx)
+func (s *DefaultHandler) Put(w http.ResponseWriter, r *http.Request) {
+	s.defaultHandler(w, r)
 }
 
-func (s *DefaultHandler) Delete(ctx *Context) {
-	s.defaultHandler(ctx)
+func (s *DefaultHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	s.defaultHandler(w, r)
 }
 
-func (s *DefaultHandler) Patch(ctx *Context) {
-	s.defaultHandler(ctx)
-}
-
-type JSONHandler struct {
-	DefaultHandler
-	JSONCodec
+func (s *DefaultHandler) Patch(w http.ResponseWriter, r *http.Request) {
+	s.defaultHandler(w, r)
 }

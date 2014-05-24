@@ -6,38 +6,17 @@ import (
 )
 
 type Handy struct {
-	mu                sync.RWMutex
-	router            *Router
-	beforeFilter      Filter
-	afterFilter       Filter
-	handleFilterError FilterError
-	currentClients    int
+	mu             sync.RWMutex
+	router         *Router
+	currentClients int
 }
 
-type Filter func(ctx *Context) error
-type FilterError func(ctx *Context, err error)
-type HandyFunc func(ctx *Context) Handler
+type HandyFunc func() Handler
 
 func NewHandy() *Handy {
 	handy := new(Handy)
 	handy.router = NewRouter()
 	return handy
-}
-
-func (handy *Handy) Handle(pattern string, handler http.Handler) {
-	// handy.mu.Lock()
-	// defer handy.mu.Unlock()
-
-	// s := new(DefaultHandler)
-	// s.Handler = handler
-	// if err := handy.router.AppendRoute(pattern, s); err != nil {
-	// 	panic("Cannot append route:" + err.Error())
-	// }
-}
-
-func (handy *Handy) HandleFunc(pattern string,
-	handler func(http.ResponseWriter, *http.Request)) {
-	handy.Handle(pattern, http.HandlerFunc(handler))
 }
 
 func (handy *Handy) HandleService(pattern string, h HandyFunc) {
@@ -49,7 +28,7 @@ func (handy *Handy) HandleService(pattern string, h HandyFunc) {
 	}
 }
 
-func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	handy.mu.RLock()
 	defer handy.mu.RUnlock()
 
@@ -60,67 +39,71 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	route, err := handy.router.Match(r.URL.Path)
 	if err != nil {
-		http.Error(w, "", http.StatusServiceUnavailable)
+		http.Error(rw, "", http.StatusServiceUnavailable)
 		return
 	}
 
-	ctx := newContext()
-	ctx.Request = r
-	ctx.ResponseWriter = w
-	ctx.vars = route.URIVars
+	constructor := route.Handler
+	h := constructor()
 
-	if handy.beforeFilter != nil {
-		if err := handy.beforeFilter(ctx); err != nil {
-			if handy.handleFilterError != nil {
-				handy.handleFilterError(ctx, err)
-			}
+	w := &ResponseWriter{ResponseWriter: rw}
+	paramsDecoder := ParamCodec{URIParams: route.URIVars}
+	paramsDecoder.Decode(w, r, h)
+
+	h.Decode(w, r, h)
+
+	if w.Written() {
+		return
+	}
+
+	for _, i := range h.Before() {
+		i.Intercept(w, r, h)
+		if w.Written() {
 			return
 		}
 	}
 
-	f := route.Handler
-	h := f(ctx)
-
-	h.Decode(ctx, h)
-
-	for _, i := range h.Interceptors() {
-		i.Intercept(ctx, h)
+	if w.Written() {
+		return
 	}
 
 	switch r.Method {
 	case "GET":
-		h.Get(ctx)
+		h.Get(w, r)
 	case "POST":
-		h.Post(ctx)
+		h.Post(w, r)
 	case "PUT":
-		h.Put(ctx)
+		h.Put(w, r)
 	case "DELETE":
-		h.Delete(ctx)
+		h.Delete(w, r)
 	case "PATCH":
-		h.Patch(ctx)
+		h.Patch(w, r)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 
-	h.Encode(ctx, h)
+	if w.Written() {
+		return
+	}
 
-	if handy.afterFilter != nil {
-		if err := handy.afterFilter(ctx); err != nil {
-			if handy.handleFilterError != nil {
-				handy.handleFilterError(ctx, err)
-			}
+	for _, i := range h.After() {
+		i.Intercept(w, r, h)
+		if w.Written() {
+			return
 		}
 	}
+
+	h.Encode(w, r, h)
 }
 
-func (handy *Handy) BeforeFilter(f Filter) {
-	handy.beforeFilter = f
+func (handy *Handy) Handle(pattern string, handler http.Handler) {
+	panic("unsupported")
+	// here we have to create a Handler with all verbs calling 'handler'
+	// handy.mu.Lock()
+	// defer handy.mu.Unlock()
 }
 
-func (handy *Handy) AfterFilter(f Filter) {
-	handy.afterFilter = f
-}
-
-func (handy *Handy) HandleFilterError(f FilterError) {
-	handy.handleFilterError = f
+func (handy *Handy) HandleFunc(pattern string,
+	handler func(http.ResponseWriter, *http.Request)) {
+	handy.Handle(pattern, http.HandlerFunc(handler))
 }
