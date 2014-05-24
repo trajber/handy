@@ -2,7 +2,6 @@ package handy
 
 import (
 	"net/http"
-	"reflect"
 	"sync"
 )
 
@@ -17,6 +16,7 @@ type Handy struct {
 
 type Filter func(ctx *Context) error
 type FilterError func(ctx *Context, err error)
+type HandyFunc func(ctx *Context) Handler
 
 func NewHandy() *Handy {
 	handy := new(Handy)
@@ -40,9 +40,7 @@ func (handy *Handy) HandleFunc(pattern string,
 	handy.Handle(pattern, http.HandlerFunc(handler))
 }
 
-func (handy *Handy) HandleService(
-	pattern string,
-	h func(ctx *Context) Handler) {
+func (handy *Handy) HandleService(pattern string, h HandyFunc) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
@@ -83,20 +81,15 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f := route.Handler
 	h := f(ctx)
 
+	dec := h.getDecoder()
+	dec.Intercept(ctx, h)
+
 	var code int
 
 	switch r.Method {
 	case "GET":
 		code, err = h.Get(ctx)
 		ctx.ResponseWriter.WriteHeader(code)
-		st := reflect.ValueOf(h).Elem()
-		for i := 0; i < st.NumField(); i++ {
-			field := st.Type().Field(i)
-			value := field.Tag.Get("get")
-			if value == "response" {
-				ctx.Marshal(st.Field(i).Interface())
-			}
-		}
 	case "POST":
 		code, err = h.Post(ctx)
 	case "PUT":
@@ -108,6 +101,9 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
+
+	enc := h.getEncoder()
+	enc.Intercept(ctx, h)
 
 	if handy.afterFilter != nil {
 		if err := handy.afterFilter(ctx); err != nil {

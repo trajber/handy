@@ -1,8 +1,6 @@
 package handy
 
-import (
-	"net/http"
-)
+import "net/http"
 
 type Handler interface {
 	Get(ctx *Context) (int, error)
@@ -10,20 +8,54 @@ type Handler interface {
 	Put(ctx *Context) (int, error)
 	Delete(ctx *Context) (int, error)
 	Patch(ctx *Context) (int, error)
+	Decoder(f Interceptor)
+	getDecoder() Interceptor
+	Encoder(f Interceptor)
+	getEncoder() Interceptor
+	After(f ...Interceptor)
+	getChain() []Interceptor
 }
 
 type DefaultHandler struct {
-	Handler http.Handler
+	http.Handler
+	encoder         Interceptor
+	decoder         Interceptor
+	getInterceptors []Interceptor
 }
 
 func (s *DefaultHandler) defaultHandler(ctx *Context) (int, error) {
 	if s.Handler != nil {
-		s.Handler.ServeHTTP(ctx.ResponseWriter, ctx.Request)
+		s.ServeHTTP(ctx.ResponseWriter, ctx.Request)
 	} else {
 		ctx.ResponseWriter.WriteHeader(http.StatusNotImplemented)
 	}
 
 	return http.StatusNotImplemented, nil
+}
+
+func (s *DefaultHandler) After(interceptors ...Interceptor) {
+	s.getInterceptors = make([]Interceptor, 0)
+	s.getInterceptors = append(s.getInterceptors, interceptors...)
+}
+
+func (s *DefaultHandler) Decoder(dec Interceptor) {
+	s.decoder = dec
+}
+
+func (s *DefaultHandler) getDecoder() Interceptor {
+	return s.decoder
+}
+
+func (s *DefaultHandler) Encoder(enc Interceptor) {
+	s.encoder = enc
+}
+
+func (s *DefaultHandler) getEncoder() Interceptor {
+	return s.encoder
+}
+
+func (s *DefaultHandler) getChain() []Interceptor {
+	return s.getInterceptors
 }
 
 func (s *DefaultHandler) Get(ctx *Context) (int, error) {
