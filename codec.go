@@ -22,33 +22,14 @@ type ParamCodec struct {
 }
 
 func (c *ParamCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
+	unmarshalURIParams(c.URIParams, reflect.ValueOf(h).Elem())
+
 	st := reflect.ValueOf(h).Elem()
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
-		value := field.Tag.Get("param")
-
-		if value == "" {
-			continue
-		}
-
-		v, ok := c.URIParams[value]
-		if !ok {
-			continue
-		}
-
-		s := st.FieldByName(field.Name)
-		if s.IsValid() && s.CanSet() {
-			switch field.Type.Kind() {
-			case reflect.String:
-				s.SetString(v)
-			case reflect.Int:
-				i, err := strconv.ParseInt(v, 10, 0)
-				if err != nil {
-					Logger.Println(err)
-					continue
-				}
-				s.SetInt(i)
-			}
+		value := field.Tag.Get("codec")
+		if value == "request" {
+			unmarshalURIParams(c.URIParams, st.Field(i))
 		}
 	}
 }
@@ -75,6 +56,37 @@ func (c *JSONCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 		if value == "request" {
 			decoder := json.NewDecoder(r.Body)
 			decoder.Decode(st.Field(i).Interface())
+		}
+	}
+}
+
+func unmarshalURIParams(uriParams map[string]string, st reflect.Value) {
+	for i := 0; i < st.NumField(); i++ {
+		field := st.Type().Field(i)
+		value := field.Tag.Get("param")
+
+		if value == "" {
+			continue
+		}
+
+		param, ok := uriParams[value]
+		if !ok {
+			continue
+		}
+
+		s := st.FieldByName(field.Name)
+		if s.IsValid() && s.CanSet() {
+			switch field.Type.Kind() {
+			case reflect.String:
+				s.SetString(param)
+			case reflect.Int:
+				i, err := strconv.ParseInt(param, 10, 0)
+				if err != nil {
+					Logger.Println(err)
+					continue
+				}
+				s.SetInt(i)
+			}
 		}
 	}
 }
