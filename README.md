@@ -13,7 +13,7 @@ Handy uses the Handler As The State Of the Request. This approach allows simple 
 ## Creating a Handler
 You just need to embed handy.DefaultHandler in your structure and override the HTTP method:
 
-```golang
+~~~ go
 package main
 
 import (
@@ -35,20 +35,20 @@ type MyHandler struct {
 func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello World"))
 }
-```
+~~~
 
 # Path with variables
 Path variables must be enclosed by braces.
 
-```golang
+~~~ go
 srv.Handle("/hello/{name}", func() handy.Handler { 
 	return new(MyHandler) 
 })
-```
+~~~
 
 And you can read them using the Handler's fields. You just need to tag the field.
 
-```golang
+~~~ go
 type MyHandler struct {
 	handy.DefaultHandler
 	Name string `param:"name"`
@@ -57,10 +57,10 @@ type MyHandler struct {
 func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello " + h.Name))
 }
-```
+~~~
 
 ### URI variables - a complete example:
-```golang
+~~~ go
 package main
 
 import (
@@ -85,38 +85,38 @@ type MyHandler struct {
 func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hello " + h.Name))
 }
-```
+~~~
 
 # Codecs
 Codecs are structures that know how to unmarshal requests and marshal responses. Handy comes with a JSON codec out of the box. You just need to embed it on you Handler
 
-```golang
+~~~ go
 type MyHandler struct {
 	handy.DefaultHandler
 	handy.JSONCodec
 }
-```
+~~~
 
 Now you're ready to create a structure that represents your protocol - in this case, using JSON tags:
 
-```golang
+~~~ go
 type MyResponse struct {
 	Message string `json:"message"`
 }
-```
+~~~
 
 And put it on your Handler tagged as 'codec'. This allows the JSON encoder to use this field as a response.
 
-```golang
+~~~ go
 type MyHandler struct {
 	handy.DefaultHandler
 	handy.JSONCodec
 	Response MyResponse `codec:"response"`
 }
-```
+~~~
 
 ## Codecs - a complete example
-```golang
+~~~ go
 package main
 
 import (
@@ -146,16 +146,16 @@ func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 type MyResponse struct {
 	Message string `json:"message"`
 }
-```
+~~~
 
 You can create your own codecs, you just need to implement the interface:
 
-```golang
+~~~ go
 type Codec interface {
 	Encode(http.ResponseWriter, *http.Request, handy.Handler)
 	Decode(http.ResponseWriter, *http.Request, handy.Handler)
 }
-```
+~~~
 
 If you don't need any codec you can use handy.NopCodec.
 
@@ -164,7 +164,7 @@ To execute functions before and/or after the verb method be called you can use i
 
 For example: If you want to check permission
 
-```golang
+~~~ go
 func (h *MyHandler) Before() handy.InterceptorChain {
 	return handy.NewInterceptorChain().Chain(CheckHeader)
 }
@@ -175,10 +175,10 @@ func CheckHeader(w http.ResponseWriter, r *http.Request, h handy.Handler) {
 		http.Error(w, "Not Authorized", http.StatusUnauthorized)
 	}
 }
-```
+~~~
 
 ## Interceptors - a complete example
-```golang
+~~~ go
 package main
 
 import (
@@ -213,4 +213,4 @@ func CheckHeader(w http.ResponseWriter, r *http.Request, h handy.Handler) {
 		http.Error(w, "Not Authorized", http.StatusUnauthorized)
 	}
 }
-```
+~~~
