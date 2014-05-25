@@ -1,114 +1,216 @@
 Handy
 ==========================================
 
-Handy is a fast and simple HTTP multiplexer for Golang. It fills two gaps
+Handy is a fast and simple HTTP multiplexer for Golang. It fills some gaps
 related to the default Golang's HTTP multiplexer:
 
 	* URI variable support (eg: "/test/{foo}")
-	* Pre and post filters
+	* Codecs
+	* Interceptors
+
+Handy uses the Handler As The State Of the Request. This approach allows simple and advanced usages.
 
 ## Creating a Handler
-You just need to embed handy.DefaultHandler in your structure:
+You just need to embed handy.DefaultHandler in your structure and override the HTTP method:
 
-	type MyHandler struct {
-		handy.DefaultHandler
-	}
+```golang
+package main
 
-Override the HTTP verb:
+import (
+	"handy"
+	"log"
+	"net/http"
+)
 
-	func (h *MyHandler) Get(ctx *handy.Context) {
-		ctx.ResponseWriter.Write([]byte("Hello World - GET"))
-	}
-
-	func (h *MyHandler) Post(ctx *handy.Context) {
-		ctx.ResponseWriter.Write([]byte("Hello World - POST"))
-	}
-
-And...
-
-	package main
-
-	import (
-		"fmt"
-		"handy"
-		"net/http"
-	)
-
-	func main() {
-		srv := handy.NewHandy()
-		srv.HandleService("/hello/", new(MyHandler))
-		fmt.Println(http.ListenAndServe(":8080", srv))
-	}
-
-## Path with variables
-Path variables must be enclosed by braces.
-
-	srv.HandleService("/hello/{foo}", new(MyHandler))
-
-And you can read them using the Context:
-
-	func (h *MyHandler) Get(ctx *handy.Context) {
-		foo := ctx.GetVar("foo")
-		...
-	}
-
-## To create pre and post filters:
-	func BeforeFilter(ctx *handy.Context) error {
-		fmt.Printf("Hello %s\n", ctx.Request.RemoteAddr)
-		return nil
-	}
-
-	func AfterFilter(ctx *handy.Context) error {
-		fmt.Printf("Bye %s.\n", ctx.GetVar("x"))
-		return nil
-	}
-
-	func main() {
-		srv := handy.NewHandy()
-		srv.BeforeFilter(BeforeFilter)
-		srv.AfterFilter(AfterFilter)
-		...
-		fmt.Println(http.ListenAndServe(":8080", srv))
+func main() {
+	srv := handy.NewHandy()
+	srv.Handle("/hello/", func() handy.Handler { return new(MyHandler) })
+	log.Fatal(http.ListenAndServe(":8080", srv))
 }
 
-## All together:
+type MyHandler struct {
+	handy.DefaultHandler
+}
 
-	package main
+func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello World"))
+}
+```
 
-	import (
-		"fmt"
-		"handy"
-		"net/http"
-	)
+# Path with variables
+Path variables must be enclosed by braces.
 
-	type MyHandler struct {
-		handy.DefaultHandler
+```golang
+srv.Handle("/hello/{name}", func() handy.Handler { 
+	return new(MyHandler) 
+})
+```
+
+And you can read them using the Handler's fields. You just need to tag the field.
+
+```golang
+type MyHandler struct {
+	handy.DefaultHandler
+	Name string `param:"name"`
+}
+
+func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello " + h.Name))
+}
+```
+
+### URI variables - a complete example:
+```golang
+package main
+
+import (
+	"handy"
+	"log"
+	"net/http"
+)
+
+func main() {
+	srv := handy.NewHandy()
+	srv.Handle("/hello/{name}", func() handy.Handler {
+		return new(MyHandler)
+	})
+	log.Fatal(http.ListenAndServe(":8080", srv))
+}
+
+type MyHandler struct {
+	handy.DefaultHandler
+	Name string `param:"name"`
+}
+
+func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello " + h.Name))
+}
+```
+
+# Codecs
+Codecs are structures that know how to unmarshal requests and marshal responses. Handy comes with a JSON codec out of the box. You just need to embed it on you Handler
+
+```golang
+type MyHandler struct {
+	handy.DefaultHandler
+	handy.JSONCodec
+}
+```
+
+Now you're ready to create a structure that represents your protocol - in this case, using JSON tags:
+
+```golang
+type MyResponse struct {
+	Message string `json:"message"`
+}
+```
+
+And put it on your Handler tagged as 'codec'. This allows the JSON encoder to use this field as a response.
+
+```golang
+type MyHandler struct {
+	handy.DefaultHandler
+	handy.JSONCodec
+	Response MyResponse `codec:"response"`
+}
+```
+
+## Codecs - a complete example
+```golang
+package main
+
+import (
+	"handy"
+	"log"
+	"net/http"
+)
+
+func main() {
+	srv := handy.NewHandy()
+	srv.Handle("/hello/", func() handy.Handler {
+		return new(MyHandler)
+	})
+	log.Fatal(http.ListenAndServe(":8080", srv))
+}
+
+type MyHandler struct {
+	handy.DefaultHandler
+	handy.JSONCodec
+	Response MyResponse `codec:"response"`
+}
+
+func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
+	h.Response.Message = "hello world"
+}
+
+type MyResponse struct {
+	Message string `json:"message"`
+}
+```
+
+You can create your own codecs, you just need to implement the interface:
+
+```golang
+type Codec interface {
+	Encode(http.ResponseWriter, *http.Request, handy.Handler)
+	Decode(http.ResponseWriter, *http.Request, handy.Handler)
+}
+```
+
+If you don't need any codec you can use handy.NopCodec.
+
+# Interceptors
+To execute functions before and/or after the verb method be called you can use interceptors. To do so you need to create a InterceptorChain in you Handler to be executed Before or After the HTTP verb method.
+
+For example: If you want to check permission
+
+```golang
+func (h *MyHandler) Before() handy.InterceptorChain {
+	return handy.NewInterceptorChain().Chain(CheckHeader)
+}
+
+func CheckHeader(w http.ResponseWriter, r *http.Request, h handy.Handler) {
+	secret := r.Header.Get("Authorization")
+	if secret != "abc123" {
+		http.Error(w, "Not Authorized", http.StatusUnauthorized)
 	}
+}
+```
 
-	func (h *MyHandler) Get(ctx *handy.Context) {
-		ctx.ResponseWriter.Write([]byte("Hello World - GET"))
-	}
+## Interceptors - a complete example
+```golang
+package main
 
-	func (h *MyHandler) Post(ctx *handy.Context) {
-		ctx.ResponseWriter.Write([]byte("Hello World - POST"))
-	}
-	
-	func BeforeFilter(ctx *handy.Context) error {
-		fmt.Printf("Hello %s\n", ctx.Request.RemoteAddr)
-		return nil
-	}
+import (
+	"handy"
+	"log"
+	"net/http"
+)
 
-	func AfterFilter(ctx *handy.Context) error {
-		fmt.Printf("Bye %s. foo variable=%s\n", 
-			ctx.Request.RemoteAddr, 
-			ctx.GetVar("foo"))
-		return nil
-	}
+func main() {
+	srv := handy.NewHandy()
+	srv.Handle("/hello/", func() handy.Handler {
+		return new(MyHandler)
+	})
+	log.Fatal(http.ListenAndServe(":8080", srv))
+}
 
-	func main() {
-		srv := handy.NewHandy()
-		srv.BeforeFilter(BeforeFilter)
-		srv.AfterFilter(AfterFilter)
-		srv.HandleService("/hello/{foo}", new(MyHandler))
-		fmt.Println(http.ListenAndServe(":8080", srv))
+type MyHandler struct {
+	handy.DefaultHandler
+}
+
+func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Success"))
+}
+
+func (h *MyHandler) Before() handy.InterceptorChain {
+	return handy.NewInterceptorChain().Chain(CheckHeader)
+}
+
+func CheckHeader(w http.ResponseWriter, r *http.Request, h handy.Handler) {
+	secret := r.Header.Get("Authorization")
+	if secret != "abc123" {
+		http.Error(w, "Not Authorized", http.StatusUnauthorized)
 	}
+}
+```

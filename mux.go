@@ -1,8 +1,14 @@
 package handy
 
 import (
+	"log"
 	"net/http"
+	"os"
 	"sync"
+)
+
+var (
+	Logger *log.Logger
 )
 
 type Handy struct {
@@ -16,10 +22,11 @@ type HandyFunc func() Handler
 func NewHandy() *Handy {
 	handy := new(Handy)
 	handy.router = NewRouter()
+	Logger = log.New(os.Stdout, "[handy] ", 0)
 	return handy
 }
 
-func (handy *Handy) HandleService(pattern string, h HandyFunc) {
+func (handy *Handy) Handle(pattern string, h HandyFunc) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
@@ -56,15 +63,11 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, i := range h.Before() {
-		i.Intercept(w, r, h)
+	for _, f := range h.Before() {
+		f(w, r, h)
 		if w.Written() {
 			return
 		}
-	}
-
-	if w.Written() {
-		return
 	}
 
 	switch r.Method {
@@ -86,24 +89,12 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, i := range h.After() {
-		i.Intercept(w, r, h)
+	for _, f := range h.After() {
+		f(w, r, h)
 		if w.Written() {
 			return
 		}
 	}
 
 	h.Encode(w, r, h)
-}
-
-func (handy *Handy) Handle(pattern string, handler http.Handler) {
-	panic("unsupported")
-	// here we have to create a Handler with all verbs calling 'handler'
-	// handy.mu.Lock()
-	// defer handy.mu.Unlock()
-}
-
-func (handy *Handy) HandleFunc(pattern string,
-	handler func(http.ResponseWriter, *http.Request)) {
-	handy.Handle(pattern, http.HandlerFunc(handler))
 }

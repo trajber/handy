@@ -2,34 +2,25 @@ package handy
 
 import "net/http"
 
-type Interceptor interface {
-	Intercept(w http.ResponseWriter, r *http.Request, h Handler)
+type Interceptor func(w http.ResponseWriter, r *http.Request, h Handler)
+
+type InterceptorChain []Interceptor
+
+func (c InterceptorChain) Chain(f Interceptor) InterceptorChain {
+	c = append(c, f)
+	return c
 }
 
-type InterceptorFunc func(w http.ResponseWriter, r *http.Request, h Handler)
-
-func (f InterceptorFunc) Intercept(w http.ResponseWriter,
-	r *http.Request,
-	h Handler) {
-	f(w, r, h)
+func NewInterceptorChain() InterceptorChain {
+	return make([]Interceptor, 0)
 }
 
-type InterceptorChain interface {
-	Interceptors() []Interceptor
+type NopInterceptorChain struct{}
+
+func (n *NopInterceptorChain) Before() InterceptorChain {
+	return NewInterceptorChain()
 }
 
-type InterceptorChainFunc func() []Interceptor
-
-func (f *InterceptorFunc) Interceptors() []Interceptor {
-	return f.Interceptors()
-}
-
-type NoOpInterceptorChain struct{}
-
-func (n *NoOpInterceptorChain) Before() []Interceptor {
-	return nil
-}
-
-func (n *NoOpInterceptorChain) After() []Interceptor {
-	return nil
+func (n *NopInterceptorChain) After() InterceptorChain {
+	return NewInterceptorChain()
 }

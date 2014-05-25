@@ -10,14 +10,14 @@ type Handler interface {
 	Patch(http.ResponseWriter, *http.Request)
 	Decode(http.ResponseWriter, *http.Request, Handler)
 	Encode(http.ResponseWriter, *http.Request, Handler)
-	Before() []Interceptor
-	After() []Interceptor
+	Before() InterceptorChain
+	After() InterceptorChain
 }
 
 type DefaultHandler struct {
 	http.Handler
-	NoOpCodec
-	NoOpInterceptorChain
+	NopCodec
+	NopInterceptorChain
 }
 
 func (s *DefaultHandler) defaultHandler(w http.ResponseWriter, r *http.Request) {

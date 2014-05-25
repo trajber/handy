@@ -12,10 +12,10 @@ type Codec interface {
 	Decode(http.ResponseWriter, *http.Request, Handler)
 }
 
-type NoOpCodec struct{}
+type NopCodec struct{}
 
-func (c *NoOpCodec) Encode(http.ResponseWriter, *http.Request, Handler) {}
-func (c *NoOpCodec) Decode(http.ResponseWriter, *http.Request, Handler) {}
+func (c *NopCodec) Encode(http.ResponseWriter, *http.Request, Handler) {}
+func (c *NopCodec) Decode(http.ResponseWriter, *http.Request, Handler) {}
 
 type ParamCodec struct {
 	URIParams map[string]string
@@ -42,7 +42,11 @@ func (c *ParamCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 			case reflect.String:
 				s.SetString(v)
 			case reflect.Int:
-				i, _ := strconv.ParseInt(v, 10, 0)
+				i, err := strconv.ParseInt(v, 10, 0)
+				if err != nil {
+					Logger.Println(err)
+					continue
+				}
 				s.SetInt(i)
 			}
 		}
