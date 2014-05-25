@@ -214,3 +214,43 @@ func CheckHeader(w http.ResponseWriter, r *http.Request, h handy.Handler) {
 	}
 }
 ~~~
+
+### Tests
+You can user httptest [Go's httptest package] (http://golang.org/pkg/net/http/httptest/)
+
+~~~ go
+package handler
+
+import (
+	"handy"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestHandler(t *testing.T) {
+	mux := handy.NewHandy()
+	h := new(HelloHandler)
+	mux.Handle("/{name}/{id}", func() handy.Handler {
+		return h
+	})
+
+	req, err := http.NewRequest("GET", "/foo/10", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if h.Id != 10 {
+		t.Errorf("Unexpected Id value %d", h.Id)
+	}
+
+	if h.Name != "foo" {
+		t.Errorf("Unexpected Name value %s", h.Name)
+	}
+
+	t.Logf("%d - %s - %d", w.Code, w.Body.String(), h.Id)
+}
+~~~
