@@ -216,7 +216,7 @@ func CheckHeader(w http.ResponseWriter, r *http.Request, h handy.Handler) {
 ~~~
 
 ### Tests
-You can user httptest [Go's httptest package] (http://golang.org/pkg/net/http/httptest/)
+You can use httptest [Go's httptest package] (http://golang.org/pkg/net/http/httptest/)
 
 ~~~ go
 package handler
