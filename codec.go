@@ -55,7 +55,7 @@ func (c *JSONCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 		value := field.Tag.Get("codec")
 		if value == "request" && r.Body != nil {
 			decoder := json.NewDecoder(r.Body)
-			decoder.Decode(st.Field(i).Interface())
+			decoder.Decode(st.Field(i).Addr().Interface())
 		}
 	}
 }
