@@ -85,15 +85,8 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 
-	if w.Written() {
-		return
-	}
-
 	for _, f := range h.After() {
 		f(w, r, h)
-		if w.Written() {
-			return
-		}
 	}
 
 	h.Encode(w, r, h)
