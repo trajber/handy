@@ -129,8 +129,8 @@ func (r *Router) Match(uri string) (*RouteMatch, error) {
 	rt.URIVars = make(map[string]string)
 
 	current := r.current
+	uri = strings.Replace(uri, " ", "", -1)
 	for _, v := range strings.Split(uri, "/") {
-		v = strings.TrimSpace(v)
 		if v == "" {
 			continue
 		}
