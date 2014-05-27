@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type Codec interface {
@@ -38,10 +39,15 @@ type JSONCodec struct{}
 
 func (c *JSONCodec) Encode(w http.ResponseWriter, r *http.Request, h Handler) {
 	st := reflect.ValueOf(h).Elem()
+	m := strings.ToLower(r.Method)
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
 		value := field.Tag.Get("codec")
 		if value == "response" {
+			methods := field.Tag.Get("method")
+			if methods != "" && !strings.Contains(methods, m) {
+				continue
+			}
 			encoder := json.NewEncoder(w)
 			encoder.Encode(st.Field(i).Interface())
 		}
@@ -50,10 +56,15 @@ func (c *JSONCodec) Encode(w http.ResponseWriter, r *http.Request, h Handler) {
 
 func (c *JSONCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 	st := reflect.ValueOf(h).Elem()
+	m := strings.ToLower(r.Method)
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
 		value := field.Tag.Get("codec")
 		if value == "request" && r.Body != nil {
+			methods := field.Tag.Get("method")
+			if methods != "" && !strings.Contains(methods, m) {
+				continue
+			}
 			decoder := json.NewDecoder(r.Body)
 			decoder.Decode(st.Field(i).Addr().Interface())
 		}
