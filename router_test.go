@@ -7,7 +7,7 @@ import (
 func TestAppendRoute(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test", h)
+	err := rt.AppendRoute("/test", func() Handler { return h })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
@@ -16,7 +16,7 @@ func TestAppendRoute(t *testing.T) {
 func TestAppendWildCard(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test/{x}", h)
+	err := rt.AppendRoute("/test/{x}", func() Handler { return h })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
@@ -25,7 +25,7 @@ func TestAppendWildCard(t *testing.T) {
 func TestFindRoute(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test", h)
+	err := rt.AppendRoute("/test", func() Handler { return h })
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
@@ -42,7 +42,7 @@ func TestFindRoute(t *testing.T) {
 func TestMatchWithWildcard(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test/{x}", h)
+	err := rt.AppendRoute("/test/{x}", func() Handler { return h })
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
@@ -59,13 +59,13 @@ func TestMatchWithWildcard(t *testing.T) {
 func TestAppendSameRoute(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test", h)
+	err := rt.AppendRoute("/test", func() Handler { return h })
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	err = rt.AppendRoute("/test", h)
+	err = rt.AppendRoute("/test", func() Handler { return h })
 
 	if err == nil {
 		t.Fatal("Overriting route. This sould not happen.")
@@ -75,7 +75,7 @@ func TestAppendSameRoute(t *testing.T) {
 func TestMultipleWildCards(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test/{x}/{y}", h)
+	err := rt.AppendRoute("/test/{x}/{y}", func() Handler { return h })
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
