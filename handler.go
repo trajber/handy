@@ -10,8 +10,7 @@ type Handler interface {
 	Patch(http.ResponseWriter, *http.Request)
 	Decode(http.ResponseWriter, *http.Request, Handler)
 	Encode(http.ResponseWriter, *http.Request, Handler)
-	Before() InterceptorChain
-	After() InterceptorChain
+	Interceptors() InterceptorChain
 }
 
 type DefaultHandler struct {
