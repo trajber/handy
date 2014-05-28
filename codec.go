@@ -25,11 +25,12 @@ type ParamCodec struct {
 func (c *ParamCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 	unmarshalURIParams(c.URIParams, reflect.ValueOf(h).Elem())
 
+	m := strings.ToLower(r.Method)
 	st := reflect.ValueOf(h).Elem()
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
-		value := field.Tag.Get("codec")
-		if value == "request" {
+		value := field.Tag.Get("request")
+		if value == "all" || strings.Contains(value, m) {
 			unmarshalURIParams(c.URIParams, st.Field(i))
 		}
 	}
@@ -42,12 +43,8 @@ func (c *JSONCodec) Encode(w http.ResponseWriter, r *http.Request, h Handler) {
 	m := strings.ToLower(r.Method)
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
-		value := field.Tag.Get("codec")
-		if value == "response" {
-			methods := field.Tag.Get("method")
-			if methods != "" && !strings.Contains(methods, m) {
-				continue
-			}
+		value := field.Tag.Get("response")
+		if value == "all" || strings.Contains(value, m) {
 			encoder := json.NewEncoder(w)
 			encoder.Encode(st.Field(i).Interface())
 		}
@@ -59,12 +56,8 @@ func (c *JSONCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 	m := strings.ToLower(r.Method)
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
-		value := field.Tag.Get("codec")
-		if value == "request" && r.Body != nil {
-			methods := field.Tag.Get("method")
-			if methods != "" && !strings.Contains(methods, m) {
-				continue
-			}
+		value := field.Tag.Get("request")
+		if (value == "all" || strings.Contains(value, m)) && r.Body != nil {
 			decoder := json.NewDecoder(r.Body)
 			decoder.Decode(st.Field(i).Addr().Interface())
 		}
