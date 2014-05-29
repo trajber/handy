@@ -105,13 +105,14 @@ type MyResponse struct {
 }
 ~~~
 
-And put it on your Handler tagged as 'codec'. This allows the JSON encoder to use this field as a response.
+And put it on your Handler tagged as 'request' or 'response'. This allows the JSON encoder to use this field as a response.
 
 ~~~ go
 type MyHandler struct {
 	handy.DefaultHandler
 	handy.JSONCodec
-	Response MyResponse `codec:"response"`
+	// this structure will be used only for get and put methods
+	Response MyResponse `response:"get,put"` 
 }
 ~~~
 
@@ -162,21 +163,6 @@ If you don't need any codec you can use handy.NopCodec.
 # Interceptors
 To execute functions before and/or after the verb method be called you can use interceptors. To do so you need to create a InterceptorChain in you Handler to be executed Before or After the HTTP verb method.
 
-For example: If you want to check permission
-
-~~~ go
-func (h *MyHandler) Before() handy.InterceptorChain {
-	return handy.NewInterceptorChain().Chain(CheckHeader)
-}
-
-func CheckHeader(w http.ResponseWriter, r *http.Request, h handy.Handler) {
-	secret := r.Header.Get("Authorization")
-	if secret != "abc123" {
-		http.Error(w, "Not Authorized", http.StatusUnauthorized)
-	}
-}
-~~~
-
 ## Interceptors - a complete example
 ~~~ go
 package main
@@ -204,14 +190,21 @@ func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MyHandler) Before() handy.InterceptorChain {
-	return handy.NewInterceptorChain().Chain(CheckHeader)
+	return handy.NewInterceptorChain().Chain(new(TimerInterceptor))
 }
 
-func CheckHeader(w http.ResponseWriter, r *http.Request, h handy.Handler) {
-	secret := r.Header.Get("Authorization")
-	if secret != "abc123" {
-		http.Error(w, "Not Authorized", http.StatusUnauthorized)
-	}
+type TimerInterceptor struct {
+	Timer time.Time
+	handy.NoErrorInterceptor
+}
+
+func (i *TimerInterceptor) Before(w http.ResponseWriter, r *http.Request, h handy.Handler) error {
+	i.Timer = time.Now()
+	return nil
+}
+
+func (i *TimerInterceptor) After(w http.ResponseWriter, r *http.Request, h handy.Handler) {
+	handy.Logger.Println("Took", time.Since(i.Timer))
 }
 ~~~
 
