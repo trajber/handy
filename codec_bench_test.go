@@ -8,7 +8,7 @@ import (
 )
 
 type TestStruct struct {
-	Name string `json:"name" method:"get"`
+	Name string `json:"name"`
 	Id   int    `json:id`
 }
 
@@ -32,7 +32,7 @@ func BenchmarkDecodeJSON(b *testing.B) {
 
 	handler := new(struct {
 		DefaultHandler
-		Request TestStruct `codec:"request" method:"get"`
+		Request TestStruct `request:"get"`
 	})
 
 	b.ResetTimer()
