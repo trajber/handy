@@ -63,8 +63,8 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	executedInterceptors := make([]Interceptor, 0)
-	for _, interceptor := range h.Interceptors() {
+	interceptors := h.Interceptors()
+	for _, interceptor := range interceptors {
 		err := interceptor.Before(w, r, h)
 		if err != nil {
 			interceptor.OnError(w, r, h, err)
@@ -76,7 +76,6 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		if w.Written() {
 			return
 		}
-		executedInterceptors = append(executedInterceptors, interceptor)
 	}
 
 	switch r.Method {
@@ -94,8 +93,8 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 
-	for k, _ := range executedInterceptors {
-		i := executedInterceptors[len(executedInterceptors)-1-k]
+	for k, _ := range interceptors {
+		i := interceptors[len(interceptors)-1-k]
 		i.After(w, r, h)
 	}
 
