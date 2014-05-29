@@ -137,7 +137,8 @@ func main() {
 type MyHandler struct {
 	handy.DefaultHandler
 	handy.JSONCodec
-	Response MyResponse `codec:"response"`
+	// this structure will be used for all HTTP methods
+	Response MyResponse `response:"all"`
 }
 
 func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -189,7 +190,7 @@ func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Success"))
 }
 
-func (h *MyHandler) Before() handy.InterceptorChain {
+func (h *MyHandler) Interceptors() handy.InterceptorChain {
 	return handy.NewInterceptorChain().Chain(new(TimerInterceptor))
 }
 
