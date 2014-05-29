@@ -64,15 +64,21 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	interceptors := h.Interceptors()
-	for _, interceptor := range interceptors {
+	for k, interceptor := range interceptors {
 		err := interceptor.Before(w, r, h)
 		if err != nil {
 			interceptor.OnError(w, r, h, err)
+			// reverse - pop-out all executed interceptors
+			for rev := k; rev >= 0; rev-- {
+				interceptors[rev].After(w, r, h)
+			}
+
 			if !w.Written() {
 				http.Error(w, "", http.StatusInternalServerError)
 			}
 			return
 		}
+
 		if w.Written() {
 			return
 		}
@@ -93,9 +99,9 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 
+	// executing all After interceptors in reverse order
 	for k, _ := range interceptors {
-		i := interceptors[len(interceptors)-1-k]
-		i.After(w, r, h)
+		interceptors[len(interceptors)-1-k].After(w, r, h)
 	}
 
 	h.Encode(w, r, h)
