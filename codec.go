@@ -36,30 +36,59 @@ func (c *ParamCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
 	}
 }
 
-type JSONCodec struct{}
+type JSONCodec struct {
+	errPosition int
+	reqPosition int
+	resPosition int
+}
 
 func (c *JSONCodec) Encode(w http.ResponseWriter, r *http.Request, h Handler) {
 	st := reflect.ValueOf(h).Elem()
-	m := strings.ToLower(r.Method)
-	for i := 0; i < st.NumField(); i++ {
-		field := st.Type().Field(i)
-		value := field.Tag.Get("response")
-		if value == "all" || strings.Contains(value, m) {
-			encoder := json.NewEncoder(w)
-			encoder.Encode(st.Field(i).Interface())
-		}
+
+	errIface := st.Field(c.errPosition).Interface()
+	if c.errPosition >= 0 && errIface != nil {
+		encoder := json.NewEncoder(w)
+		encoder.Encode(errIface)
+		return
+	}
+
+	if c.resPosition >= 0 {
+		encoder := json.NewEncoder(w)
+		encoder.Encode(st.Field(c.resPosition).Interface())
 	}
 }
 
 func (c *JSONCodec) Decode(w http.ResponseWriter, r *http.Request, h Handler) {
-	st := reflect.ValueOf(h).Elem()
 	m := strings.ToLower(r.Method)
+	c.parse(m, h)
+
+	if c.reqPosition >= 0 {
+		st := reflect.ValueOf(h).Elem()
+		decoder := json.NewDecoder(r.Body)
+		decoder.Decode(st.Field(c.reqPosition).Addr().Interface())
+	}
+}
+
+func (c *JSONCodec) parse(m string, h Handler) {
+	c.errPosition, c.reqPosition, c.resPosition = -1, -1, -1
+
+	st := reflect.ValueOf(h).Elem()
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
+		if field.Tag == "error" {
+			c.errPosition = i
+			continue
+		}
+
 		value := field.Tag.Get("request")
-		if (value == "all" || strings.Contains(value, m)) && r.Body != nil {
-			decoder := json.NewDecoder(r.Body)
-			decoder.Decode(st.Field(i).Addr().Interface())
+		if value == "all" || strings.Contains(value, m) {
+			c.reqPosition = i
+			continue
+		}
+
+		value = field.Tag.Get("response")
+		if value == "all" || strings.Contains(value, m) {
+			c.resPosition = i
 		}
 	}
 }
