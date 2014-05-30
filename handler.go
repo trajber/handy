@@ -8,8 +8,6 @@ type Handler interface {
 	Put(http.ResponseWriter, *http.Request)
 	Delete(http.ResponseWriter, *http.Request)
 	Patch(http.ResponseWriter, *http.Request)
-	Decode(http.ResponseWriter, *http.Request, Handler)
-	Encode(http.ResponseWriter, *http.Request, Handler)
 	Interceptors() InterceptorChain
 }
 

@@ -57,7 +57,9 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	paramsDecoder := ParamCodec{URIParams: route.URIVars}
 	paramsDecoder.Decode(w, r, h)
 
-	h.Decode(w, r, h)
+	if codec, ok := h.(Codec); ok {
+		codec.Decode(w, r, h)
+	}
 
 	if w.Written() {
 		return
@@ -65,23 +67,18 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	interceptors := h.Interceptors()
 	for k, interceptor := range interceptors {
-		err := interceptor.Before(w, r, h)
-		if err != nil {
-			interceptor.OnError(w, r, h, err)
-			// reverse - pop-out all executed interceptors
-			for rev := k; rev >= 0; rev-- {
-				interceptors[rev].After(w, r, h)
-			}
-
-			if !w.Written() {
-				http.Error(w, "", http.StatusInternalServerError)
-			}
-			return
+		interceptor.Before(w, r, h)
+		if !w.Written() {
+			continue
 		}
 
-		if w.Written() {
-			return
+		// if something was written... pop-out all executed interceptors
+		// and execute them in reverse order calling After method.
+		for rev := k; rev >= 0; rev-- {
+			interceptors[rev].After(w, r, h)
 		}
+
+		goto encode
 	}
 
 	switch r.Method {
@@ -104,5 +101,8 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		interceptors[len(interceptors)-1-k].After(w, r, h)
 	}
 
-	h.Encode(w, r, h)
+encode:
+	if codec, ok := h.(Codec); ok {
+		codec.Encode(w, r, h)
+	}
 }
