@@ -65,22 +65,28 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	interceptors := h.Interceptors()
-	for k, interceptor := range interceptors {
-		interceptor.Before(w, r, h)
-		if !w.Written() {
-			continue
-		}
+	executeChain(h.Interceptors(), w, r, h)
 
-		// if something was written... pop-out all executed interceptors
-		// and execute them in reverse order calling After method.
-		for rev := k; rev >= 0; rev-- {
-			interceptors[rev].After(w, r, h)
-		}
+	if codec, ok := h.(Codec); ok {
+		codec.Encode(w, r, h)
+	}
+}
 
-		goto encode
+func executeChain(is []Interceptor, w *ResponseWriter, r *http.Request, h Handler) {
+	if len(is) == 0 {
+		call(w, r, h)
+		return
 	}
 
+	is[0].Before(w, r, h)
+
+	if !w.Written() {
+		executeChain(is[1:], w, r, h)
+		is[0].After(w, r, h)
+	}
+}
+
+func call(w http.ResponseWriter, r *http.Request, h Handler) {
 	switch r.Method {
 	case "GET":
 		h.Get(w, r)
@@ -94,15 +100,5 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		h.Patch(w, r)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
-	}
-
-	// executing all After interceptors in reverse order
-	for k, _ := range interceptors {
-		interceptors[len(interceptors)-1-k].After(w, r, h)
-	}
-
-encode:
-	if codec, ok := h.(Codec); ok {
-		codec.Encode(w, r, h)
 	}
 }
