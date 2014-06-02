@@ -37,7 +37,7 @@ func (handy *Handy) Handle(pattern string, h HandyFunc) {
 	}
 }
 
-func (handy *Handy) SetCountClients() {
+func (handy *Handy) CountClients() {
 	handy.countClients = true
 }
 
@@ -53,43 +53,30 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	constructor := route.Handler
-	h := constructor()
+	h := route.Handler()
 
 	w := &ResponseWriter{ResponseWriter: rw}
-	paramsDecoder := ParamCodec{URIParams: route.URIVars}
-	paramsDecoder.Decode(w, r, h)
+	paramsDecoder := newParamDecoder(h, route.URIVars)
+	paramsDecoder.Decode(w, r)
 
-	if codec, ok := h.(Codec); ok {
-		codec.Decode(w, r, h)
-	}
-
-	if w.Written() {
-		return
-	}
-
-	executeChain(h.Interceptors(), w, r, h)
-
-	if codec, ok := h.(Codec); ok {
-		codec.Encode(w, r, h)
-	}
+	executeChain(h.Interceptors(), h, w, r)
 }
 
-func executeChain(is []Interceptor, w *ResponseWriter, r *http.Request, h Handler) {
+func executeChain(is []Interceptor, h Handler, w *ResponseWriter, r *http.Request) {
 	if len(is) == 0 {
-		call(w, r, h)
+		call(h, w, r)
 		return
 	}
 
 	is[0].Before(w, r)
 
 	if !w.Written() {
-		executeChain(is[1:], w, r, h)
+		executeChain(is[1:], h, w, r)
 		is[0].After(w, r)
 	}
 }
 
-func call(w http.ResponseWriter, r *http.Request, h Handler) {
+func call(h Handler, w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		h.Get(w, r)

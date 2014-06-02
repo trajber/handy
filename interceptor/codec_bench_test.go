@@ -1,6 +1,7 @@
-package handy
+package interceptor
 
 import (
+	"handy"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,16 +29,17 @@ func BenchmarkDecodeJSON(b *testing.B) {
 
 	w := httptest.NewRecorder()
 
-	codec := JSONCodec{}
-
 	handler := new(struct {
-		DefaultHandler
+		handy.DefaultHandler
 		Request TestStruct `request:"get"`
 	})
 
+	codec := JSONCodec{}
+	codec.SetStruct(handler)
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		codec.Decode(w, req, handler)
+		codec.Before(w, req)
 		if handler.Request.Id != 10 {
 			b.Fail()
 		}
