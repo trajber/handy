@@ -198,6 +198,7 @@ func (h *MyHandler) Interceptors() handy.InterceptorChain {
 type MyResponse struct {
     Message string `json:"message"`
 }
+~~~
 
 
 # Tests
