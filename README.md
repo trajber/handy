@@ -87,80 +87,6 @@ func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 ~~~
 
-# Codecs
-Codecs are structures that know how to unmarshal requests and marshal responses. Handy comes with a JSON codec out of the box. You just need to embed it on you Handler
-
-~~~ go
-type MyHandler struct {
-	handy.DefaultHandler
-	handy.JSONCodec
-}
-~~~
-
-Now you're ready to create a structure that represents your protocol - in this case, using JSON tags:
-
-~~~ go
-type MyResponse struct {
-	Message string `json:"message"`
-}
-~~~
-
-And put it on your Handler tagged as 'request' or 'response'. This allows the JSON encoder to use this field as a response.
-
-~~~ go
-type MyHandler struct {
-	handy.DefaultHandler
-	handy.JSONCodec
-	// this structure will be used only for get and put methods
-	Response MyResponse `response:"get,put"` 
-}
-~~~
-
-## Codecs - a complete example
-~~~ go
-package main
-
-import (
-	"handy"
-	"log"
-	"net/http"
-)
-
-func main() {
-	srv := handy.NewHandy()
-	srv.Handle("/hello/", func() handy.Handler {
-		return new(MyHandler)
-	})
-	log.Fatal(http.ListenAndServe(":8080", srv))
-}
-
-type MyHandler struct {
-	handy.DefaultHandler
-	handy.JSONCodec
-	// this structure will be used for all HTTP methods
-	Response MyResponse `response:"all"`
-}
-
-func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
-	h.Response.Message = "hello world"
-}
-
-type MyResponse struct {
-	Message string `json:"message"`
-}
-~~~
-
-You can create your own codecs, you just need to implement the interface:
-
-~~~ go
-type Codec interface {
-	Encode(http.ResponseWriter, *http.Request, handy.Handler)
-	Decode(http.ResponseWriter, *http.Request, handy.Handler)
-}
-~~~
-
-If you don't need any codec you can use handy.NopCodec.
-
 # Interceptors
 To execute functions before and/or after the verb method be called you can use interceptors. To do so you need to create a InterceptorChain in you Handler to be executed Before or After the HTTP verb method.
 
@@ -199,17 +125,82 @@ type TimerInterceptor struct {
 	handy.NoErrorInterceptor
 }
 
-func (i *TimerInterceptor) Before(w http.ResponseWriter, r *http.Request, h handy.Handler) error {
+func (i *TimerInterceptor) Before(w http.ResponseWriter, r *http.Request) {
 	i.Timer = time.Now()
 	return nil
 }
 
-func (i *TimerInterceptor) After(w http.ResponseWriter, r *http.Request, h handy.Handler) {
+func (i *TimerInterceptor) After(w http.ResponseWriter, r *http.Request) {
 	handy.Logger.Println("Took", time.Since(i.Timer))
 }
 ~~~
 
-### Tests
+## Codec interceptor
+Handy comes with a JSONCodec interceptor. It can be used to automatically 
+unmarshal requests and marshal responses. It does so by reading special tags in 
+your handler:
+
+~~~ go
+type MyResponse struct {
+	Message string `json:"message"`
+}
+
+type MyHandler struct {
+	handy.DefaultHandler
+	// this structure will be used only for get and put methods
+	Response MyResponse `response:"get,put"` 
+}
+~~~
+
+Now, you just need to include JSONCode in the handler's interceptor chain:
+~~~ go
+func (h *MyHandler) Interceptors() handy.InterceptorChain {
+	codec := inteceptor.JSONCodec{}
+	codec.SetStruct(h)
+	return handy.NewInterceptorChain().Chain(codec)
+}
+~~~
+
+### Codec inteceptor - a complete example:
+~~~ go
+package main
+
+import (
+    "handy"
+    "handy/interceptor"
+    "log"
+    "net/http"
+)
+
+func main() {
+    srv := handy.NewHandy()
+    srv.Handle("/hello/", func() handy.Handler {
+        return new(MyHandler)
+    })
+    log.Fatal(http.ListenAndServe(":8080", srv))
+}
+
+type MyHandler struct {
+    handy.DefaultHandler
+    Response MyResponse `response:"all"`
+}
+
+func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
+    h.Response.Message = "hello world"
+}
+
+func (h *MyHandler) Interceptors() handy.InterceptorChain {
+	codec := inteceptor.JSONCodec{}
+	codec.SetStruct(h)
+	return handy.NewInterceptorChain().Chain(codec)
+}
+
+type MyResponse struct {
+    Message string `json:"message"`
+}
+
+
+# Tests
 You can use [Go's httptest package] (http://golang.org/pkg/net/http/httptest/)
 
 ~~~ go
@@ -248,3 +239,4 @@ func TestHandler(t *testing.T) {
 	t.Logf("%d - %s - %d", w.Code, w.Body.String(), h.Id)
 }
 ~~~
+
