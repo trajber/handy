@@ -13,7 +13,6 @@ type Handler interface {
 
 type DefaultHandler struct {
 	http.Handler
-	NopCodec
 	NopInterceptorChain
 }
 
