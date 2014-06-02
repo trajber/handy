@@ -12,12 +12,12 @@ type TestInterceptorHandler struct {
 
 type DummyInterceptor struct{}
 
-func (i *DummyInterceptor) Before(w http.ResponseWriter, r *http.Request, h Handler) {
+func (i *DummyInterceptor) Before(w http.ResponseWriter, r *http.Request) {
 	for j := 0; j < 10000; j++ {
 	}
 }
 
-func (i *DummyInterceptor) After(w http.ResponseWriter, r *http.Request, h Handler) {
+func (i *DummyInterceptor) After(w http.ResponseWriter, r *http.Request) {
 	for j := 0; j < 10000; j++ {
 	}
 }

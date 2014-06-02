@@ -3,8 +3,8 @@ package handy
 import "net/http"
 
 type Interceptor interface {
-	Before(w http.ResponseWriter, r *http.Request, h Handler)
-	After(w http.ResponseWriter, r *http.Request, h Handler)
+	Before(w http.ResponseWriter, r *http.Request)
+	After(w http.ResponseWriter, r *http.Request)
 }
 
 type InterceptorChain []Interceptor
@@ -24,18 +24,18 @@ func (n *NopInterceptorChain) Interceptors() InterceptorChain {
 	return NewInterceptorChain()
 }
 
-type BeforeInterceptorFunc func(w http.ResponseWriter, r *http.Request, h Handler)
+type BeforeInterceptorFunc func(w http.ResponseWriter, r *http.Request)
 
-func (i BeforeInterceptorFunc) Before(w http.ResponseWriter, r *http.Request, h Handler) {
-	i(w, r, h)
+func (i BeforeInterceptorFunc) Before(w http.ResponseWriter, r *http.Request) {
+	i(w, r)
 }
 
-func (i BeforeInterceptorFunc) After(w http.ResponseWriter, r *http.Request, h Handler) {}
+func (i BeforeInterceptorFunc) After(w http.ResponseWriter, r *http.Request) {}
 
-type AfterInterceptorFunc func(w http.ResponseWriter, r *http.Request, h Handler)
+type AfterInterceptorFunc func(w http.ResponseWriter, r *http.Request)
 
-func (i AfterInterceptorFunc) Before(w http.ResponseWriter, r *http.Request, h Handler) {}
+func (i AfterInterceptorFunc) Before(w http.ResponseWriter, r *http.Request) {}
 
-func (i AfterInterceptorFunc) After(w http.ResponseWriter, r *http.Request, h Handler) {
-	i(w, r, h)
+func (i AfterInterceptorFunc) After(w http.ResponseWriter, r *http.Request) {
+	i(w, r)
 }

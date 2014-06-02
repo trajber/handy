@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"sync/atomic"
 )
 
 var (
@@ -14,7 +15,8 @@ var (
 type Handy struct {
 	mu             sync.RWMutex
 	router         *Router
-	currentClients int
+	currentClients int32
+	countClients   bool
 }
 
 type HandyFunc func() Handler
@@ -35,14 +37,15 @@ func (handy *Handy) Handle(pattern string, h HandyFunc) {
 	}
 }
 
-func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	handy.mu.RLock()
-	defer handy.mu.RUnlock()
+func (handy *Handy) SetCountClients() {
+	handy.countClients = true
+}
 
-	handy.currentClients++
-	defer func() {
-		handy.currentClients--
-	}()
+func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	if handy.countClients {
+		atomic.AddInt32(&handy.currentClients, 1)
+		defer atomic.AddInt32(&handy.currentClients, -1)
+	}
 
 	route, err := handy.router.Match(r.URL.Path)
 	if err != nil {
@@ -78,11 +81,11 @@ func executeChain(is []Interceptor, w *ResponseWriter, r *http.Request, h Handle
 		return
 	}
 
-	is[0].Before(w, r, h)
+	is[0].Before(w, r)
 
 	if !w.Written() {
 		executeChain(is[1:], w, r, h)
-		is[0].After(w, r, h)
+		is[0].After(w, r)
 	}
 }
 
