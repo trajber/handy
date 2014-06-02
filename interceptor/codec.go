@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-type Codec struct{}
-
 type JSONCodec struct {
 	structure   interface{}
 	errPosition int
