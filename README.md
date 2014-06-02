@@ -88,7 +88,7 @@ func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 ~~~
 
 # Interceptors
-To execute functions before and/or after the verb method be called you can use interceptors. To do so you need to create a InterceptorChain in you Handler to be executed Before or After the HTTP verb method.
+To execute functions before and/or after the verb method being called you can use interceptors. To do so you need to create a InterceptorChain in you Handler to be executed Before or After the HTTP verb method.
 
 ## Interceptors - a complete example
 ~~~ go
