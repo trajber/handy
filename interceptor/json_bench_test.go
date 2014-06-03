@@ -34,8 +34,7 @@ func BenchmarkDecodeJSON(b *testing.B) {
 		Request TestStruct `request:"get"`
 	})
 
-	codec := JSONCodec{}
-	codec.SetStruct(handler)
+	codec := NewJSONCodec(handler)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
