@@ -16,7 +16,7 @@ type Handy struct {
 	mu             sync.RWMutex
 	router         *Router
 	currentClients int32
-	countClients   bool
+	CountClients   bool
 }
 
 type HandyFunc func() Handler
@@ -37,15 +37,14 @@ func (handy *Handy) Handle(pattern string, h HandyFunc) {
 	}
 }
 
-func (handy *Handy) CountClients() {
-	handy.countClients = true
-}
-
 func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	if handy.countClients {
+	if handy.CountClients {
 		atomic.AddInt32(&handy.currentClients, 1)
 		defer atomic.AddInt32(&handy.currentClients, -1)
 	}
+
+	handy.mu.RLock()
+	defer handy.mu.RUnlock()
 
 	route, err := handy.router.Match(r.URL.Path)
 	if err != nil {
@@ -59,24 +58,22 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	paramsDecoder := newParamDecoder(h, route.URIVars)
 	paramsDecoder.Decode(w, r)
 
-	executeChain(h.Interceptors(), h, w, r)
-}
+	interceptors := h.Interceptors()
+	for k, interceptor := range interceptors {
+		interceptor.Before(w, r)
+		if !w.Written() {
+			continue
+		}
 
-func executeChain(is []Interceptor, h Handler, w *ResponseWriter, r *http.Request) {
-	if len(is) == 0 {
-		call(h, w, r)
+		// if something was written... pop-out all executed interceptors
+		// and execute them in reverse order calling After method.
+		for rev := k; rev >= 0; rev-- {
+			interceptors[rev].After(w, r)
+		}
+
 		return
 	}
 
-	is[0].Before(w, r)
-
-	if !w.Written() {
-		executeChain(is[1:], h, w, r)
-		is[0].After(w, r)
-	}
-}
-
-func call(h Handler, w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		h.Get(w, r)
@@ -90,5 +87,10 @@ func call(h Handler, w http.ResponseWriter, r *http.Request) {
 		h.Patch(w, r)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
+	}
+
+	// executing all After interceptors in reverse order
+	for k, _ := range interceptors {
+		interceptors[len(interceptors)-1-k].After(w, r)
 	}
 }
