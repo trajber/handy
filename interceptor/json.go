@@ -14,8 +14,8 @@ type JSONCodec struct {
 	resPosition int
 }
 
-func (c *JSONCodec) SetStruct(structure interface{}) {
-	c.structure = structure
+func NewJSONCodec(st interface{}) *JSONCodec {
+	return &JSONCodec{structure: st}
 }
 
 func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {

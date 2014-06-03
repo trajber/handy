@@ -1,6 +1,8 @@
 package handy
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type ResponseWriter struct {
 	http.ResponseWriter
