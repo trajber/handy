@@ -85,6 +85,8 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		h.Delete(w, r)
 	case "PATCH":
 		h.Patch(w, r)
+	case "HEAD":
+		h.Head(w, r)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
