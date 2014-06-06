@@ -11,9 +11,13 @@ type ResponseWriter struct {
 
 func (w *ResponseWriter) Write(b []byte) (int, error) {
 	if !w.Written() {
-		// the first call to Write
-		// will trigger an implicit WriteHeader(http.StatusOK).
-		w.WriteHeader(http.StatusOK)
+		if w.status == 0 {
+			// the first call to Write
+			// will trigger an implicit WriteHeader(http.StatusOK).
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(w.status)
+		}
 	}
 
 	return w.ResponseWriter.Write(b)
@@ -24,6 +28,5 @@ func (w *ResponseWriter) Written() bool {
 }
 
 func (w *ResponseWriter) WriteHeader(s int) {
-	w.ResponseWriter.WriteHeader(s)
 	w.status = s
 }

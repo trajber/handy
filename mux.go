@@ -17,6 +17,7 @@ type Handy struct {
 	router         *Router
 	currentClients int32
 	CountClients   bool
+	Recover        func(interface{})
 }
 
 type HandyFunc func() Handler
@@ -45,6 +46,12 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	handy.mu.RLock()
 	defer handy.mu.RUnlock()
+
+	defer func() {
+		if r := recover(); r != nil && handy.Recover != nil {
+			handy.Recover(r)
+		}
+	}()
 
 	route, err := handy.router.Match(r.URL.Path)
 	if err != nil {
@@ -94,5 +101,9 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	// executing all After interceptors in reverse order
 	for k, _ := range interceptors {
 		interceptors[len(interceptors)-1-k].After(w, r)
+	}
+
+	if !w.Written() {
+		w.Write(nil)
 	}
 }
