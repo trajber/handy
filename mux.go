@@ -50,6 +50,7 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if r := recover(); r != nil && handy.Recover != nil {
 			handy.Recover(r)
+			rw.WriteHeader(http.StatusInternalServerError)
 		}
 	}()
 
