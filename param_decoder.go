@@ -31,6 +31,10 @@ func (c *paramDecoder) Decode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *paramDecoder) unmarshalURIParams(st reflect.Value) {
+	if st.Kind() == reflect.Ptr {
+		return
+	}
+
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
 		value := field.Tag.Get("param")
