@@ -40,8 +40,14 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if c.resPosition >= 0 {
+		elem := st.Field(c.resPosition).Interface()
+		elemType := reflect.TypeOf(elem)
+		if elemType.Kind() == reflect.Ptr && st.Field(c.resPosition).IsNil() {
+			return
+		}
+
 		encoder := json.NewEncoder(w)
-		encoder.Encode(st.Field(c.resPosition).Interface())
+		encoder.Encode(elem)
 	}
 }
 
