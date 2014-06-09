@@ -48,9 +48,13 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	defer handy.mu.RUnlock()
 
 	defer func() {
-		if r := recover(); r != nil && handy.Recover != nil {
-			handy.Recover(r)
-			rw.WriteHeader(http.StatusInternalServerError)
+		if r := recover(); r != nil {
+			if handy.Recover != nil {
+				handy.Recover(r)
+				rw.WriteHeader(http.StatusInternalServerError)
+			} else if Logger != nil {
+				Logger.Println(r)
+			}
 		}
 	}()
 
