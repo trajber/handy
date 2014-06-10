@@ -73,21 +73,10 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	interceptors := h.Interceptors()
 	for k, interceptor := range interceptors {
 		interceptor.Before(w, r)
-		if w.status == 0 && !w.Written {
-			continue
+		if w.status > 0 || w.Written {
+			interceptors = interceptors[:k]
+			goto write
 		}
-
-		// if something was written... pop-out all executed interceptors
-		// and execute them in reverse order calling After method.
-		for rev := k; rev >= 0; rev-- {
-			interceptors[rev].After(w, r)
-		}
-
-		if !w.Written {
-			w.Write(nil)
-		}
-
-		return
 	}
 
 	switch r.Method {
@@ -107,6 +96,7 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 
+write:
 	// executing all After interceptors in reverse order
 	for k, _ := range interceptors {
 		interceptors[len(interceptors)-1-k].After(w, r)
