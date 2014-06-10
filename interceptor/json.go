@@ -32,10 +32,14 @@ func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {
 func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 	st := reflect.ValueOf(c.structure).Elem()
 
-	errIface := st.Field(c.errPosition).Interface()
-	if c.errPosition >= 0 && errIface != nil {
-		encoder := json.NewEncoder(w)
-		encoder.Encode(errIface)
+	if c.errPosition >= 0 {
+		elem := st.Field(c.errPosition).Interface()
+		elemType := reflect.TypeOf(elem)
+		if elemType.Kind() == reflect.Ptr && !st.Field(c.errPosition).IsNil() {
+			encoder := json.NewEncoder(w)
+			encoder.Encode(elem)
+		}
+
 		return
 	}
 
