@@ -73,7 +73,7 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	interceptors := h.Interceptors()
 	for k, interceptor := range interceptors {
 		interceptor.Before(w, r)
-		if !w.Written() {
+		if w.status == 0 && !w.Written {
 			continue
 		}
 
@@ -81,6 +81,10 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		// and execute them in reverse order calling After method.
 		for rev := k; rev >= 0; rev-- {
 			interceptors[rev].After(w, r)
+		}
+
+		if !w.Written {
+			w.Write(nil)
 		}
 
 		return
@@ -108,7 +112,7 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		interceptors[len(interceptors)-1-k].After(w, r)
 	}
 
-	if !w.Written() {
+	if !w.Written {
 		w.Write(nil)
 	}
 }
