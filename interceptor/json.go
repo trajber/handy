@@ -33,14 +33,14 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 	st := reflect.ValueOf(c.structure).Elem()
 
 	if c.errPosition >= 0 {
-		elem := st.Field(c.errPosition).Interface()
-		elemType := reflect.TypeOf(elem)
-		if elemType.Kind() == reflect.Ptr && !st.Field(c.errPosition).IsNil() {
-			encoder := json.NewEncoder(w)
-			encoder.Encode(elem)
+		if elem := st.Field(c.errPosition).Interface(); elem != nil {
+			elemType := reflect.TypeOf(elem)
+			if elemType.Kind() == reflect.Ptr && !st.Field(c.errPosition).IsNil() {
+				encoder := json.NewEncoder(w)
+				encoder.Encode(elem)
+				return
+			}
 		}
-
-		return
 	}
 
 	if c.resPosition >= 0 {
