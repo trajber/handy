@@ -17,6 +17,7 @@ type Handy struct {
 	router         *Router
 	currentClients int32
 	CountClients   bool
+	Recover        func(interface{})
 }
 
 type HandyFunc func() Handler
@@ -45,6 +46,17 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	handy.mu.RLock()
 	defer handy.mu.RUnlock()
+
+	defer func() {
+		if r := recover(); r != nil {
+			if handy.Recover != nil {
+				handy.Recover(r)
+				rw.WriteHeader(http.StatusInternalServerError)
+			} else if Logger != nil {
+				Logger.Println(r)
+			}
+		}
+	}()
 
 	route, err := handy.router.Match(r.URL.Path)
 	if err != nil {
