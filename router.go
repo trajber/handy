@@ -59,13 +59,13 @@ func (r *Router) AppendRoute(uri string, h HandyFunc) error {
 
 	appended := false
 	tokens := strings.Split(uri, "/")
-	for k, v := range tokens {
+	for _, v := range tokens {
 		if v == "" {
 			continue
 		}
 
 		if n, ok := r.nodeExists(v); ok {
-			if len(tokens)-1 == k {
+			if len(n.children) == 0 {
 				return ErrRouteAlreadyExists
 			}
 

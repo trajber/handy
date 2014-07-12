@@ -7,7 +7,12 @@ import (
 func TestAppendRoute(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test", func() Handler { return h })
+	err := rt.AppendRoute("/test/test", func() Handler { return h })
+	if err != nil {
+		t.Fatal("Cannot append a valid route", err)
+	}
+
+	err = rt.AppendRoute("/test/test", func() Handler { return h })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
