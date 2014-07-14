@@ -57,16 +57,30 @@ func (r *Router) nodeExists(n string) (*node, bool) {
 func (r *Router) AppendRoute(uri string, h HandyFunc) error {
 	uri = strings.TrimSpace(uri)
 
+	// Make sure we are not appending the root ("/"), otherwise remove final slash
+	if len(uri) > 1 && uri[len(uri)-1] == '/' {
+		uri = uri[:len(uri)-1]
+	}
+
+	// Should end at root node
+	defer func() {
+		r.current = r.root
+	}()
+
 	appended := false
 	tokens := strings.Split(uri, "/")
-	for _, v := range tokens {
+	for i, v := range tokens {
 		if v == "" {
 			continue
 		}
 
 		if n, ok := r.nodeExists(v); ok {
-			if len(n.children) == 0 {
+			if i == len(tokens)-1 && n.handler != nil {
 				return ErrRouteAlreadyExists
+
+			} else if i == len(tokens)-1 {
+				n.handler = h
+				return nil
 			}
 
 			r.current = n
@@ -97,7 +111,6 @@ func (r *Router) AppendRoute(uri string, h HandyFunc) error {
 
 	if r.current != r.root {
 		r.current.handler = h
-		r.current = r.root // reset
 	}
 
 	if appended == false {

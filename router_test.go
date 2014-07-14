@@ -12,9 +12,24 @@ func TestAppendRoute(t *testing.T) {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	err = rt.AppendRoute("/test/", func() Handler { return h })
+	err = rt.AppendRoute("/test", func() Handler { return h })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
+	}
+
+	err = rt.AppendRoute("/test/test", func() Handler { return h })
+	if err == nil {
+		t.Fatal("Appending the same route twice")
+	}
+
+	err = rt.AppendRoute("/test", func() Handler { return h })
+	if err == nil {
+		t.Fatal("Appending the same route twice")
+	}
+
+	err = rt.AppendRoute("/test/", func() Handler { return h })
+	if err == nil {
+		t.Fatal("Appending the same route twice", err)
 	}
 }
 
@@ -24,6 +39,21 @@ func TestAppendWildCard(t *testing.T) {
 	err := rt.AppendRoute("/test/{x}", func() Handler { return h })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
+	}
+
+	err = rt.AppendRoute("/test/{x}/test", func() Handler { return h })
+	if err != nil {
+		t.Fatal("Cannot append a valid route", err)
+	}
+
+	err = rt.AppendRoute("/test/{x}", func() Handler { return h })
+	if err == nil {
+		t.Fatal("Appending the same route twice")
+	}
+
+	err = rt.AppendRoute("/test/{x}/test", func() Handler { return h })
+	if err == nil {
+		t.Fatal("Appending the same route twice")
 	}
 }
 
