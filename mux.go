@@ -74,9 +74,6 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	for k, interceptor := range interceptors {
 		interceptor.Before(w, r)
 		if w.status > 0 || w.Written {
-			if k > 0 {
-				k--
-			}
 			interceptors = interceptors[:k]
 			goto write
 		}
