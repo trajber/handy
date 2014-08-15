@@ -31,6 +31,11 @@ func TestAppendRoute(t *testing.T) {
 	if err == nil {
 		t.Fatal("Appending the same route twice", err)
 	}
+
+	err = rt.AppendRoute("/", func() Handler { return h })
+	if err != nil {
+		t.Fatal("Cannot append root", err)
+	}
 }
 
 func TestAppendWildCard(t *testing.T) {
