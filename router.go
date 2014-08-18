@@ -135,7 +135,7 @@ func (n *node) findChild(name string) *node {
 	v, ok := n.children[name]
 	if !ok && n.hasChildWildcard {
 		// looking for wildcard
-		v, ok = n.children[n.wildcardName]
+		v = n.children[n.wildcardName]
 	}
 
 	return v
@@ -160,7 +160,7 @@ func (r *Router) Match(uri string) (*RouteMatch, error) {
 
 		n := current.findChild(v)
 		if n == nil {
-			return rt, ErrRouteNotFound
+			break
 		}
 
 		if n.isWildcard {
