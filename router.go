@@ -125,7 +125,7 @@ func (n *node) findChild(name string) *node {
 	v, ok := n.children[name]
 	if !ok && n.hasChildWildcard {
 		// looking for wildcard
-		v, ok = n.children[n.wildcardName]
+		v = n.children[n.wildcardName]
 	}
 
 	return v

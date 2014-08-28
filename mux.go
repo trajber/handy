@@ -12,6 +12,10 @@ var (
 	Logger *log.Logger
 )
 
+func init() {
+	Logger = log.New(os.Stdout, "[handy] ", 0)
+}
+
 type Handy struct {
 	mu             sync.RWMutex
 	router         *Router
@@ -25,7 +29,6 @@ type HandyFunc func() Handler
 func NewHandy() *Handy {
 	handy := new(Handy)
 	handy.router = NewRouter()
-	Logger = log.New(os.Stdout, "[handy] ", 0)
 	return handy
 }
 
