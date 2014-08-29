@@ -63,7 +63,10 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	route, err := handy.router.Match(r.URL.Path)
 	if err != nil {
-		http.Error(rw, "", http.StatusServiceUnavailable)
+		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
+		// The server has not found anything matching the Request-URI. No indication is given of whether
+		// the condition is temporary or permanent.
+		http.NotFound(rw, r)
 		return
 	}
 
