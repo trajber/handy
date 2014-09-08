@@ -47,8 +47,11 @@ func cleanWildcard(l string) string {
 func (r *Router) nodeExists(n string) (*node, bool) {
 	v, ok := r.current.children[n]
 	if !ok && r.current.hasChildWildcard {
-		// looking for wildcard
-		v, ok = r.current.children[r.current.wildcardName]
+		if isWildcard(n) {
+			n = cleanWildcard(n)
+			// looking for wildcard with the same name
+			v, ok = r.current.children[n]
+		}
 	}
 
 	return v, ok
@@ -72,6 +75,10 @@ func (r *Router) AppendRoute(uri string, h HandyFunc) error {
 	for i, v := range tokens {
 		if v == "" {
 			continue
+		}
+
+		if r.current.hasChildWildcard && !isWildcard(v) {
+			return ErrCannotAppendRoute
 		}
 
 		if n, ok := r.nodeExists(v); ok {

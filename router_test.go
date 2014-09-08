@@ -57,6 +57,22 @@ func TestAppendWildCard(t *testing.T) {
 	}
 }
 
+func TestAppendInvalidWildCard(t *testing.T) {
+	rt := NewRouter()
+	h := new(DefaultHandler)
+
+	err := rt.AppendRoute("/test/{x}", func() Handler { return h })
+	if err != nil {
+		t.Fatal("Cannot append a valid route", err)
+	}
+
+	err = rt.AppendRoute("/test/{y}", func() Handler { return h })
+	t.Log(err)
+	if err == nil {
+		t.Fatal("A invalid node was appended", err)
+	}
+}
+
 func TestFindRoute(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
