@@ -26,3 +26,7 @@ func (w *ResponseWriter) Write(b []byte) (int, error) {
 func (w *ResponseWriter) WriteHeader(s int) {
 	w.status = s
 }
+
+func (w *ResponseWriter) Status() int {
+	return w.status
+}

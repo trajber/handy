@@ -12,6 +12,10 @@ var (
 	Logger *log.Logger
 )
 
+func init() {
+	Logger = log.New(os.Stdout, "[handy] ", 0)
+}
+
 type Handy struct {
 	mu             sync.RWMutex
 	router         *Router
@@ -25,7 +29,6 @@ type HandyFunc func() Handler
 func NewHandy() *Handy {
 	handy := new(Handy)
 	handy.router = NewRouter()
-	Logger = log.New(os.Stdout, "[handy] ", 0)
 	return handy
 }
 
@@ -60,7 +63,10 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	route, err := handy.router.Match(r.URL.Path)
 	if err != nil {
-		http.Error(rw, "", http.StatusServiceUnavailable)
+		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
+		// The server has not found anything matching the Request-URI. No indication is given of whether
+		// the condition is temporary or permanent.
+		http.NotFound(rw, r)
 		return
 	}
 
@@ -74,9 +80,6 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	for k, interceptor := range interceptors {
 		interceptor.Before(w, r)
 		if w.status > 0 || w.Written {
-			if k > 0 {
-				k--
-			}
 			interceptors = interceptors[:k]
 			goto write
 		}

@@ -21,7 +21,7 @@ func (s *DefaultHandler) defaultHandler(w http.ResponseWriter, r *http.Request) 
 	if s.Handler != nil {
 		s.ServeHTTP(w, r)
 	} else {
-		w.WriteHeader(http.StatusNotImplemented)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
