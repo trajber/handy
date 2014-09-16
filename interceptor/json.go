@@ -25,7 +25,11 @@ func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {
 	if c.reqPosition >= 0 {
 		st := reflect.ValueOf(c.structure).Elem()
 		decoder := json.NewDecoder(r.Body)
-		decoder.Decode(st.Field(c.reqPosition).Addr().Interface())
+		for {
+			if err := decoder.Decode(st.Field(c.reqPosition).Addr().Interface()); err != nil {
+				break
+			}
+		}
 	}
 }
 
