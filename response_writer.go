@@ -41,6 +41,10 @@ func (rw *BufferedResponseWriter) Write(buf []byte) (int, error) {
 	return len(buf), nil
 }
 
+func (rw *BufferedResponseWriter) Status() int {
+	return rw.status
+}
+
 func (rw *BufferedResponseWriter) WriteHeader(code int) {
 	if !rw.wroteHeader {
 		rw.status = code
