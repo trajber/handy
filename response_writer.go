@@ -12,9 +12,10 @@ type BufferedResponseWriter struct {
 	Body    *bytes.Buffer
 }
 
-func NewBufferedResponseWriter() *BufferedResponseWriter {
+func NewBufferedResponseWriter(w http.ResponseWriter) *BufferedResponseWriter {
 	return &BufferedResponseWriter{
 		Body: new(bytes.Buffer),
+		wire: w,
 	}
 }
 
@@ -25,11 +26,7 @@ func (rw *BufferedResponseWriter) Header() http.Header {
 
 // Write always succeeds and writes to rw.Body, if not nil.
 func (rw *BufferedResponseWriter) Write(buf []byte) (int, error) {
-	if rw.Body != nil {
-		rw.Body.Write(buf)
-	}
-
-	return len(buf), nil
+	return rw.Body.Write(buf)
 }
 
 func (rw *BufferedResponseWriter) Status() int {
@@ -45,14 +42,12 @@ func (rw *BufferedResponseWriter) Flush() {
 		rw.WriteHeader(http.StatusOK)
 	}
 
-	if !rw.flushed && rw.wire != nil {
+	if !rw.flushed {
 		rw.wire.WriteHeader(rw.status)
 	}
 
-	if rw.Body != nil && rw.wire != nil {
-		rw.wire.Write(rw.Body.Bytes())
-		rw.Body.Reset()
-	}
+	rw.wire.Write(rw.Body.Bytes())
+	rw.Body.Reset()
 
 	rw.flushed = true
 }

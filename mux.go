@@ -72,8 +72,7 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	h := route.Handler()
 
-	w := NewBufferedResponseWriter()
-	w.wire = rw
+	w := NewBufferedResponseWriter(rw)
 
 	paramsDecoder := newParamDecoder(h, route.URIVars)
 	paramsDecoder.Decode(w, r)
