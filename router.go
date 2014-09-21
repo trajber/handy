@@ -75,6 +75,7 @@ func (r *Router) AppendRoute(uri string, h HandyFunc) error {
 		if r.root.handler != nil {
 			return ErrRouteAlreadyExists
 		}
+
 		r.root.handler = h
 		return nil
 	}
