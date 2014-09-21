@@ -72,14 +72,16 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	h := route.Handler()
 
-	w := &ResponseWriter{ResponseWriter: rw}
+	w := NewBufferedResponseWriter(rw)
+
 	paramsDecoder := newParamDecoder(h, route.URIVars)
 	paramsDecoder.Decode(w, r)
 
 	interceptors := h.Interceptors()
 	for k, interceptor := range interceptors {
 		interceptor.Before(w, r)
-		if w.status > 0 || w.Written {
+		// if something was written we need to stop the execution
+		if w.status > 0 || (w.flushed || w.Body.Len() > 0) {
 			interceptors = interceptors[:k]
 			goto write
 		}
@@ -108,7 +110,5 @@ write:
 		interceptors[len(interceptors)-1-k].After(w, r)
 	}
 
-	if !w.Written {
-		w.Write(nil)
-	}
+	w.Flush()
 }

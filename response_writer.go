@@ -1,32 +1,53 @@
 package handy
 
 import (
+	"bytes"
 	"net/http"
 )
 
-type ResponseWriter struct {
-	http.ResponseWriter
+type BufferedResponseWriter struct {
+	flushed bool
 	status  int
-	Written bool
+	wire    http.ResponseWriter
+	Body    *bytes.Buffer
 }
 
-func (w *ResponseWriter) Write(b []byte) (int, error) {
-	if !w.Written {
-		// note: the first call to Write will trigger an
-		// implicit WriteHeader(http.StatusOK).
-		if w.status > 0 {
-			w.ResponseWriter.WriteHeader(w.status)
-		}
+func NewBufferedResponseWriter(w http.ResponseWriter) *BufferedResponseWriter {
+	return &BufferedResponseWriter{
+		Body: new(bytes.Buffer),
+		wire: w,
+	}
+}
+
+// Header returns the response headers.
+func (rw *BufferedResponseWriter) Header() http.Header {
+	return rw.wire.Header()
+}
+
+// Write always succeeds and writes to rw.Body, if not nil.
+func (rw *BufferedResponseWriter) Write(buf []byte) (int, error) {
+	return rw.Body.Write(buf)
+}
+
+func (rw *BufferedResponseWriter) Status() int {
+	return rw.status
+}
+
+func (rw *BufferedResponseWriter) WriteHeader(code int) {
+	rw.status = code
+}
+
+func (rw *BufferedResponseWriter) Flush() {
+	if rw.status == 0 {
+		rw.WriteHeader(http.StatusOK)
 	}
 
-	w.Written = true
-	return w.ResponseWriter.Write(b)
-}
+	if !rw.flushed {
+		rw.wire.WriteHeader(rw.status)
+	}
 
-func (w *ResponseWriter) WriteHeader(s int) {
-	w.status = s
-}
+	rw.wire.Write(rw.Body.Bytes())
+	rw.Body.Reset()
 
-func (w *ResponseWriter) Status() int {
-	return w.status
+	rw.flushed = true
 }
