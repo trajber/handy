@@ -25,18 +25,26 @@ func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {
 	if c.reqPosition >= 0 {
 		st := reflect.ValueOf(c.structure).Elem()
 		decoder := json.NewDecoder(r.Body)
-		decoder.Decode(st.Field(c.reqPosition).Addr().Interface())
+		for {
+			if err := decoder.Decode(st.Field(c.reqPosition).Addr().Interface()); err != nil {
+				break
+			}
+		}
 	}
 }
 
 func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 	st := reflect.ValueOf(c.structure).Elem()
 
-	errIface := st.Field(c.errPosition).Interface()
-	if c.errPosition >= 0 && errIface != nil {
-		encoder := json.NewEncoder(w)
-		encoder.Encode(errIface)
-		return
+	if c.errPosition >= 0 {
+		if elem := st.Field(c.errPosition).Interface(); elem != nil {
+			elemType := reflect.TypeOf(elem)
+			if elemType.Kind() == reflect.Ptr && !st.Field(c.errPosition).IsNil() {
+				encoder := json.NewEncoder(w)
+				encoder.Encode(elem)
+				return
+			}
+		}
 	}
 
 	if c.resPosition >= 0 {

@@ -47,8 +47,11 @@ func cleanWildcard(l string) string {
 func (r *Router) nodeExists(n string) (*node, bool) {
 	v, ok := r.current.children[n]
 	if !ok && r.current.hasChildWildcard {
-		// looking for wildcard
-		v, ok = r.current.children[r.current.wildcardName]
+		if isWildcard(n) {
+			n = cleanWildcard(n)
+			// looking for wildcard with the same name
+			v, ok = r.current.children[n]
+		}
 	}
 
 	return v, ok
@@ -57,16 +60,34 @@ func (r *Router) nodeExists(n string) (*node, bool) {
 func (r *Router) AppendRoute(uri string, h HandyFunc) error {
 	uri = strings.TrimSpace(uri)
 
+	// Make sure we are not appending the root ("/"), otherwise remove final slash
+	if len(uri) > 1 && uri[len(uri)-1] == '/' {
+		uri = uri[:len(uri)-1]
+	}
+
+	// Should end at root node
+	defer func() {
+		r.current = r.root
+	}()
+
 	appended := false
 	tokens := strings.Split(uri, "/")
-	for k, v := range tokens {
+	for i, v := range tokens {
 		if v == "" {
 			continue
 		}
 
+		if r.current.hasChildWildcard && !isWildcard(v) {
+			return ErrCannotAppendRoute
+		}
+
 		if n, ok := r.nodeExists(v); ok {
-			if len(tokens)-1 == k {
+			if i == len(tokens)-1 && n.handler != nil {
 				return ErrRouteAlreadyExists
+
+			} else if i == len(tokens)-1 {
+				n.handler = h
+				return nil
 			}
 
 			r.current = n
@@ -97,7 +118,6 @@ func (r *Router) AppendRoute(uri string, h HandyFunc) error {
 
 	if r.current != r.root {
 		r.current.handler = h
-		r.current = r.root // reset
 	}
 
 	if appended == false {
@@ -112,7 +132,7 @@ func (n *node) findChild(name string) *node {
 	v, ok := n.children[name]
 	if !ok && n.hasChildWildcard {
 		// looking for wildcard
-		v, ok = n.children[n.wildcardName]
+		v = n.children[n.wildcardName]
 	}
 
 	return v
