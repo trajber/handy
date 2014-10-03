@@ -30,6 +30,9 @@ func (rw *BufferedResponseWriter) Write(buf []byte) (int, error) {
 }
 
 func (rw *BufferedResponseWriter) Status() int {
+	if rw.status == 0 {
+		return http.StatusOK
+	}
 	return rw.status
 }
 

@@ -82,7 +82,7 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		interceptor.Before(w, r)
 		// if something was written we need to stop the execution
 		if w.status > 0 || (w.flushed || w.Body.Len() > 0) {
-			interceptors = interceptors[:k]
+			interceptors = interceptors[:k+1]
 			goto write
 		}
 	}
