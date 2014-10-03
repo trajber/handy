@@ -12,6 +12,10 @@ var (
 	Logger *log.Logger
 )
 
+func init() {
+	Logger = log.New(os.Stdout, "[handy] ", 0)
+}
+
 type Handy struct {
 	mu             sync.RWMutex
 	router         *Router
@@ -25,7 +29,6 @@ type HandyFunc func() Handler
 func NewHandy() *Handy {
 	handy := new(Handy)
 	handy.router = NewRouter()
-	Logger = log.New(os.Stdout, "[handy] ", 0)
 	return handy
 }
 
@@ -60,34 +63,28 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	route, err := handy.router.Match(r.URL.Path)
 	if err != nil {
-		http.Error(rw, "", http.StatusServiceUnavailable)
+		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
+		// The server has not found anything matching the Request-URI. No indication is given of whether
+		// the condition is temporary or permanent.
+		http.NotFound(rw, r)
 		return
 	}
 
 	h := route.Handler()
 
-	w := &ResponseWriter{ResponseWriter: rw}
+	w := NewBufferedResponseWriter(rw)
+
 	paramsDecoder := newParamDecoder(h, route.URIVars)
 	paramsDecoder.Decode(w, r)
 
 	interceptors := h.Interceptors()
 	for k, interceptor := range interceptors {
 		interceptor.Before(w, r)
-		if !w.Modified() {
-			continue
+		// if something was written we need to stop the execution
+		if w.status > 0 || (w.flushed || w.Body.Len() > 0) {
+			interceptors = interceptors[:k+1]
+			goto write
 		}
-
-		// if something was written... pop-out all executed interceptors
-		// and execute them in reverse order calling After method.
-		for rev := k; rev >= 0; rev-- {
-			interceptors[rev].After(w, r)
-		}
-
-		if !w.Written() {
-			w.Write(nil)
-		}
-
-		return
 	}
 
 	switch r.Method {
@@ -107,12 +104,11 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
 
+write:
 	// executing all After interceptors in reverse order
 	for k, _ := range interceptors {
 		interceptors[len(interceptors)-1-k].After(w, r)
 	}
 
-	if !w.Written() {
-		w.Write(nil)
-	}
+	w.Flush()
 }
