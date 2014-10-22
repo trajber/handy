@@ -48,7 +48,7 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value) {
 			continue
 		}
 
-		s := st.FieldByName(field.Name)
+		s := st.Field(i)
 		if s.IsValid() && s.CanSet() {
 			switch field.Type.Kind() {
 			case reflect.String:
