@@ -65,10 +65,6 @@ func (c *JSONCodec) parse(m string) {
 	st := reflect.ValueOf(c.structure).Elem()
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
-		if field.Tag == "error" {
-			c.errPosition = i
-			continue
-		}
 
 		value := field.Tag.Get("request")
 		if value == "all" || strings.Contains(value, m) {
@@ -77,8 +73,11 @@ func (c *JSONCodec) parse(m string) {
 		}
 
 		value = field.Tag.Get("response")
+
 		if value == "all" || strings.Contains(value, m) {
 			c.resPosition = i
+		} else if value == "error" {
+			c.errPosition = i
 		}
 	}
 }
