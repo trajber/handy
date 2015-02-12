@@ -223,7 +223,7 @@ type MyHandler struct {
 }
 
 func (h *MyHandler) Post(w http.ResponseWriter, r *http.Request) {
-	h.Response.Answer = "The answer for " + h.Request.Question
+	h.Response.Answer = "You asked me about " + h.Request.Question
 }
 
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
@@ -239,6 +239,19 @@ type MyRequest struct {
 	Question string `json:"question"`
 }
 ~~~
+When you submit the content using the HTTP verb POST:
+~~~javascript
+{
+	"question": "life"
+}
+~~~
+You will get:
+~~~javascript
+{
+	"answer": "You asked me about life"
+}
+~~~
+
 
 #Logging
 Bad things happens even inside Handy; You can set your own function to handle Handy errors.
@@ -248,8 +261,8 @@ package main
 
 import (
 		"github.com/trajber/handy"
-    "log"
-    "net/http"
+		"log"
+		"net/http"
 )
 
 func main() {
