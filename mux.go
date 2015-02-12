@@ -1,20 +1,14 @@
 package handy
 
 import (
-	"log"
 	"net/http"
-	"os"
 	"sync"
 	"sync/atomic"
 )
 
 var (
-	Logger *log.Logger
+	ErrorFunc func(e error)
 )
-
-func init() {
-	Logger = log.New(os.Stdout, "[handy] ", 0)
-}
 
 type Handy struct {
 	mu             sync.RWMutex
@@ -54,10 +48,8 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		if r := recover(); r != nil {
 			if handy.Recover != nil {
 				handy.Recover(r)
-				rw.WriteHeader(http.StatusInternalServerError)
-			} else if Logger != nil {
-				Logger.Println(r)
 			}
+			rw.WriteHeader(http.StatusInternalServerError)
 		}
 	}()
 

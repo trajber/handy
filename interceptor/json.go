@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+
+	"github.com/trajber/handy"
 )
 
 type JSONCodec struct {
@@ -41,7 +43,9 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 			elemType := reflect.TypeOf(elem)
 			if elemType.Kind() == reflect.Ptr && !st.Field(c.errPosition).IsNil() {
 				encoder := json.NewEncoder(w)
-				encoder.Encode(elem)
+				if err := encoder.Encode(elem); err != nil && handy.ErrorFunc != nil {
+					handy.ErrorFunc(err)
+				}
 				return
 			}
 		}
@@ -55,7 +59,9 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 		}
 
 		encoder := json.NewEncoder(w)
-		encoder.Encode(elem)
+		if err := encoder.Encode(elem); err != nil && handy.ErrorFunc != nil {
+			handy.ErrorFunc(err)
+		}
 	}
 }
 

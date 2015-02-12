@@ -55,15 +55,15 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value) {
 				s.SetString(param)
 			case reflect.Int:
 				i, err := strconv.ParseInt(param, 10, 0)
-				if err != nil {
-					Logger.Println(err)
+				if err != nil && ErrorFunc != nil {
+					ErrorFunc(err)
 					continue
 				}
 				s.SetInt(i)
 			case reflect.Int64:
 				i, err := strconv.ParseInt(param, 10, 64)
-				if err != nil {
-					Logger.Println(err)
+				if err != nil && ErrorFunc != nil {
+					ErrorFunc(err)
 					continue
 				}
 				s.SetInt(i)
