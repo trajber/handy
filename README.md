@@ -17,7 +17,7 @@ You just need to embed handy.DefaultHandler in your structure and override the H
 package main
 
 import (
-	"handy"
+	"github.com/trajber/handy"
 	"log"
 	"net/http"
 )
@@ -64,7 +64,7 @@ func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 package main
 
 import (
-	"handy"
+	"github.com/trajber/handy"
 	"log"
 	"net/http"
 )
@@ -95,7 +95,7 @@ To execute functions before and/or after the verb method being called you can us
 package main
 
 import (
-	"handy"
+	"github.com/trajber/handy"
 	"log"
 	"net/http"
 )
@@ -131,14 +131,12 @@ func (i *TimerInterceptor) Before(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *TimerInterceptor) After(w http.ResponseWriter, r *http.Request) {
-	handy.Logger.Println("Took", time.Since(i.Timer))
+	log.Println("Took", time.Since(i.Timer))
 }
 ~~~
 
-## Codec interceptor
-Handy comes with a JSONCodec interceptor. It can be used to automatically 
-unmarshal requests and marshal responses. It does so by reading special tags in 
-your handler:
+## JSON Codec interceptor
+Handy comes with a JSONCodec interceptor out of the box. It can be used to automatically unmarshal requests and marshal responses using JSON. It does so by reading special tags in your handler:
 
 ~~~ go
 type MyResponse struct {
@@ -155,19 +153,18 @@ type MyHandler struct {
 Now, you just need to include JSONCode in the handler's interceptor chain:
 ~~~ go
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	codec := inteceptor.JSONCodec{}
-	codec.SetStruct(h)
+	codec := inteceptor.NewJSONCodec(h)
 	return handy.NewInterceptorChain().Chain(codec)
 }
 ~~~
 
-### Codec inteceptor - a complete example:
+### JSON Codec inteceptor - a complete example:
 ~~~ go
 package main
 
 import (
-    "handy"
-    "handy/interceptor"
+		"github.com/trajber/handy"
+		"github.com/trajber/handy/interceptor"
     "log"
     "net/http"
 )
@@ -190,8 +187,7 @@ func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	codec := inteceptor.JSONCodec{}
-	codec.SetStruct(h)
+	codec := interceptor.NewJSONCodec(h)
 	return handy.NewInterceptorChain().Chain(codec)
 }
 
@@ -200,6 +196,77 @@ type MyResponse struct {
 }
 ~~~
 
+### JSON Codec inteceptor - An example with JSON in request and response:
+~~~go
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/trajber/handy"
+	"github.com/trajber/handy/interceptor"
+)
+
+func main() {
+	srv := handy.NewHandy()
+	srv.Handle("/hello/", func() handy.Handler {
+		return new(MyHandler)
+	})
+	log.Fatal(http.ListenAndServe(":8181", srv))
+}
+
+type MyHandler struct {
+	handy.DefaultHandler
+	Response MyResponse `response:"post"`
+	Request  MyRequest  `request:"post"`
+}
+
+func (h *MyHandler) Post(w http.ResponseWriter, r *http.Request) {
+	h.Response.Answer = "The answer for " + h.Request.Question
+}
+
+func (h *MyHandler) Interceptors() handy.InterceptorChain {
+	codec := interceptor.NewJSONCodec(h)
+	return handy.NewInterceptorChain().Chain(codec)
+}
+
+type MyResponse struct {
+	Answer string `json:"answer"`
+}
+
+type MyRequest struct {
+	Question string `json:"question"`
+}
+~~~
+
+#Logging
+Bad things happens even inside Handy; You can set your own function to handle Handy errors.
+
+~~~go
+package main
+
+import (
+		"github.com/trajber/handy"
+    "log"
+    "net/http"
+)
+
+func main() {
+    srv := handy.NewHandy()
+    // This function will be called when 
+    // some error occurs inside Handy code.
+    srv.ErrorFunc = func(e error) {
+    	// here you can handle the error
+    	log.Println(e)
+  	}
+    srv.Handle("/hello/", func() handy.Handler {
+        return new(MyHandler)
+    })
+
+    log.Fatal(http.ListenAndServe(":8080", srv))
+}
+~~~
 
 # Tests
 You can use [Go's httptest package] (http://golang.org/pkg/net/http/httptest/)
@@ -208,7 +275,7 @@ You can use [Go's httptest package] (http://golang.org/pkg/net/http/httptest/)
 package handler
 
 import (
-	"handy"
+	"github.com/trajber/handy"
 	"net/http"
 	"net/http/httptest"
 	"testing"
