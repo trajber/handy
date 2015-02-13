@@ -29,6 +29,9 @@ func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		for {
 			if err := decoder.Decode(st.Field(c.reqPosition).Addr().Interface()); err != nil {
+				if handy.ErrorFunc != nil {
+					handy.ErrorFunc(err)
+				}
 				break
 			}
 		}
