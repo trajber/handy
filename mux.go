@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrorFunc func(e error)
+	ErrorFunc func(e error) = func(e error) {}
 )
 
 type Handy struct {
