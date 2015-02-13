@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
-
-	"github.com/trajber/handy"
 )
 
 type JSONCodec struct {
@@ -14,6 +12,7 @@ type JSONCodec struct {
 	errPosition int
 	reqPosition int
 	resPosition int
+	ErrorFunc   func(e error)
 }
 
 func NewJSONCodec(st interface{}) *JSONCodec {
@@ -29,8 +28,8 @@ func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		for {
 			if err := decoder.Decode(st.Field(c.reqPosition).Addr().Interface()); err != nil {
-				if handy.ErrorFunc != nil {
-					handy.ErrorFunc(err)
+				if c.ErrorFunc != nil {
+					c.ErrorFunc(err)
 				}
 				break
 			}
@@ -46,8 +45,8 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 			elemType := reflect.TypeOf(elem)
 			if elemType.Kind() == reflect.Ptr && !st.Field(c.errPosition).IsNil() {
 				encoder := json.NewEncoder(w)
-				if err := encoder.Encode(elem); err != nil && handy.ErrorFunc != nil {
-					handy.ErrorFunc(err)
+				if err := encoder.Encode(elem); err != nil && c.ErrorFunc != nil {
+					c.ErrorFunc(err)
 				}
 				return
 			}
@@ -62,8 +61,8 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 		}
 
 		encoder := json.NewEncoder(w)
-		if err := encoder.Encode(elem); err != nil && handy.ErrorFunc != nil {
-			handy.ErrorFunc(err)
+		if err := encoder.Encode(elem); err != nil && c.ErrorFunc != nil {
+			c.ErrorFunc(err)
 		}
 	}
 }
