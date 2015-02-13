@@ -150,7 +150,7 @@ type MyHandler struct {
 }
 ~~~
 
-Now, you just need to include JSONCode in the handler's interceptor chain:
+Now, you just need to include JSONCodec in the handler's interceptor chain:
 ~~~ go
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
 	codec := inteceptor.NewJSONCodec(h)
