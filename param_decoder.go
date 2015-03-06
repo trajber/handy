@@ -60,6 +60,20 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value) {
 					continue
 				}
 				s.SetInt(i)
+			case reflect.Int16:
+				i, err := strconv.ParseInt(param, 10, 16)
+				if err != nil && ErrorFunc != nil {
+					ErrorFunc(err)
+					continue
+				}
+				s.SetInt(i)
+			case reflect.Int32:
+				i, err := strconv.ParseInt(param, 10, 32)
+				if err != nil && ErrorFunc != nil {
+					ErrorFunc(err)
+					continue
+				}
+				s.SetInt(i)
 			case reflect.Int64:
 				i, err := strconv.ParseInt(param, 10, 64)
 				if err != nil && ErrorFunc != nil {
@@ -67,6 +81,30 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value) {
 					continue
 				}
 				s.SetInt(i)
+			case reflect.Uint16:
+				i, err := strconv.ParseUint(param, 10, 16)
+				if err != nil && ErrorFunc != nil {
+					ErrorFunc(err)
+					continue
+				}
+				s.SetUint(i)
+			case reflect.Uint32:
+				i, err := strconv.ParseUint(param, 10, 32)
+				if err != nil && ErrorFunc != nil {
+					ErrorFunc(err)
+					continue
+				}
+				s.SetUint(i)
+			case reflect.Uint64:
+				i, err := strconv.ParseUint(param, 10, 64)
+				if err != nil && ErrorFunc != nil {
+					ErrorFunc(err)
+					continue
+				}
+				s.SetUint(i)
+			case reflect.Bool:
+				lower := strings.ToLower(param)
+				s.SetBool(lower == "true")
 			}
 		}
 	}
