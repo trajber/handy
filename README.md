@@ -98,6 +98,7 @@ import (
 	"github.com/trajber/handy"
 	"log"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -122,12 +123,10 @@ func (h *MyHandler) Interceptors() handy.InterceptorChain {
 
 type TimerInterceptor struct {
 	Timer time.Time
-	handy.NoErrorInterceptor
 }
 
 func (i *TimerInterceptor) Before(w http.ResponseWriter, r *http.Request) {
 	i.Timer = time.Now()
-	return nil
 }
 
 func (i *TimerInterceptor) After(w http.ResponseWriter, r *http.Request) {
