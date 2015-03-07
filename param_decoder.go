@@ -59,24 +59,35 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value) {
 				s.SetBool(lower == "true")
 
 			case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
-				i, err := strconv.ParseInt(param, 10, 64)
+				n, err := strconv.ParseInt(param, 10, 64)
 				if err != nil {
 					if ErrorFunc != nil {
 						ErrorFunc(err)
 					}
 					continue
 				}
-				s.SetInt(i)
+				s.SetInt(n)
 
 			case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				i, err := strconv.ParseUint(param, 10, 64)
+				n, err := strconv.ParseUint(param, 10, 64)
 				if err != nil {
 					if ErrorFunc != nil {
 						ErrorFunc(err)
 					}
 					continue
 				}
-				s.SetUint(i)
+				s.SetUint(n)
+
+			case reflect.Float32, reflect.Float64:
+				n, err := strconv.ParseFloat(param, 64)
+				if err != nil {
+					if ErrorFunc != nil {
+						ErrorFunc(err)
+					}
+					continue
+				}
+				s.SetFloat(n)
+
 			}
 		}
 	}
