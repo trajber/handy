@@ -53,58 +53,30 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value) {
 			switch field.Type.Kind() {
 			case reflect.String:
 				s.SetString(param)
-			case reflect.Int:
-				i, err := strconv.ParseInt(param, 10, 0)
-				if err != nil && ErrorFunc != nil {
-					ErrorFunc(err)
-					continue
-				}
-				s.SetInt(i)
-			case reflect.Int16:
-				i, err := strconv.ParseInt(param, 10, 16)
-				if err != nil && ErrorFunc != nil {
-					ErrorFunc(err)
-					continue
-				}
-				s.SetInt(i)
-			case reflect.Int32:
-				i, err := strconv.ParseInt(param, 10, 32)
-				if err != nil && ErrorFunc != nil {
-					ErrorFunc(err)
-					continue
-				}
-				s.SetInt(i)
-			case reflect.Int64:
-				i, err := strconv.ParseInt(param, 10, 64)
-				if err != nil && ErrorFunc != nil {
-					ErrorFunc(err)
-					continue
-				}
-				s.SetInt(i)
-			case reflect.Uint16:
-				i, err := strconv.ParseUint(param, 10, 16)
-				if err != nil && ErrorFunc != nil {
-					ErrorFunc(err)
-					continue
-				}
-				s.SetUint(i)
-			case reflect.Uint32:
-				i, err := strconv.ParseUint(param, 10, 32)
-				if err != nil && ErrorFunc != nil {
-					ErrorFunc(err)
-					continue
-				}
-				s.SetUint(i)
-			case reflect.Uint64:
-				i, err := strconv.ParseUint(param, 10, 64)
-				if err != nil && ErrorFunc != nil {
-					ErrorFunc(err)
-					continue
-				}
-				s.SetUint(i)
+
 			case reflect.Bool:
 				lower := strings.ToLower(param)
 				s.SetBool(lower == "true")
+
+			case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
+				i, err := strconv.ParseInt(param, 10, 64)
+				if err != nil {
+					if ErrorFunc != nil {
+						ErrorFunc(err)
+					}
+					continue
+				}
+				s.SetInt(i)
+
+			case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				i, err := strconv.ParseUint(param, 10, 64)
+				if err != nil {
+					if ErrorFunc != nil {
+						ErrorFunc(err)
+					}
+					continue
+				}
+				s.SetUint(i)
 			}
 		}
 	}
