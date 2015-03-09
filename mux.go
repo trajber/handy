@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrorFunc func(e error) = func(e error) {}
+	ErrorFunc = func(e error) {}
 )
 
 type Handy struct {
@@ -68,12 +68,18 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	paramsDecoder := newParamDecoder(h, route.URIVars)
 	paramsDecoder.Decode(w, r)
+	// something may have be written in ParamDecoderErrorFunc
+	if w.somethingWasWritten() {
+		// aborting execution
+		w.Flush()
+		return
+	}
 
 	interceptors := h.Interceptors()
 	for k, interceptor := range interceptors {
 		interceptor.Before(w, r)
 		// if something was written we need to stop the execution
-		if w.status > 0 || (w.flushed || w.Body.Len() > 0) {
+		if w.somethingWasWritten() {
 			interceptors = interceptors[:k+1]
 			goto write
 		}
@@ -98,7 +104,7 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 write:
 	// executing all After interceptors in reverse order
-	for k, _ := range interceptors {
+	for k := range interceptors {
 		interceptors[len(interceptors)-1-k].After(w, r)
 	}
 
