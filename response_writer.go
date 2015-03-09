@@ -54,3 +54,7 @@ func (rw *BufferedResponseWriter) Flush() {
 
 	rw.flushed = true
 }
+
+func (rw *BufferedResponseWriter) somethingWasWritten() bool {
+	return rw.status > 0 || (rw.flushed || rw.Body.Len() > 0)
+}
