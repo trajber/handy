@@ -1,6 +1,7 @@
 package handy
 
 import (
+	"encoding"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -88,6 +89,22 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value,
 					}
 				}
 				s.SetFloat(n)
+			default:
+				// check if the structure implements TextUnmarshaler
+				if !s.CanAddr() {
+					continue
+				}
+
+				u, ok := s.Addr().Interface().(encoding.TextUnmarshaler)
+				if !ok {
+					continue
+				}
+
+				if err := u.UnmarshalText([]byte(param)); err != nil {
+					if handleParamError(w, r, err) {
+						return
+					}
+				}
 
 			}
 		}
