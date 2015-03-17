@@ -37,7 +37,7 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 		if elem := c.err.Interface(); elem != nil {
 			elemType := reflect.TypeOf(elem)
 			if elemType.Kind() == reflect.Ptr && !c.err.IsNil() {
-				w.Header().Add("Content-Type", "application/json")
+				w.Header().Set("Content-Type", "application/json")
 				encoder := json.NewEncoder(w)
 				encoder.Encode(elem)
 				return
@@ -52,7 +52,7 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 		encoder := json.NewEncoder(w)
 		encoder.Encode(elem)
 	}
