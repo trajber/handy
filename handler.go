@@ -63,7 +63,7 @@ func (s *DefaultHandler) ResponseWriter() http.ResponseWriter {
 	return s.response
 }
 
-func (s *DefaultHandler) Request() *http.Request {
+func (s *DefaultHandler) Req() *http.Request {
 	return s.request
 }
 

@@ -40,14 +40,17 @@ func TestInterceptorOrder(t *testing.T) {
 	for i, item := range data {
 		handleFuncCalled := false
 		handler := &mockHandler{
-			handleFunc: func(http.ResponseWriter, *http.Request) {
+			handleFunc: func() int {
 				handleFuncCalled = true
+				return http.StatusOK
 			},
 			interceptors: item.interceptors,
 		}
 
 		uri := fmt.Sprintf("/uri/%d", i)
-		mux.Handle(uri, func() Handler { return handler })
+		mux.Handle(uri, func(http.ResponseWriter, *http.Request, URIVars) Handler {
+			return handler
+		})
 
 		w := httptest.NewRecorder()
 		r, err := http.NewRequest("GET", uri, nil)
@@ -98,12 +101,14 @@ type mockInterceptor struct {
 	afterMethodCalled  bool
 }
 
-func (m *mockInterceptor) Before(w http.ResponseWriter, r *http.Request) {
+func (m *mockInterceptor) Before() int {
 	m.beforeMethodCalled = true
+	return 0
 }
 
-func (m *mockInterceptor) After(w http.ResponseWriter, r *http.Request) {
+func (m *mockInterceptor) After(int) int {
 	m.afterMethodCalled = true
+	return 0
 }
 
 func (m *mockInterceptor) BeforeMethodCalled() bool {
@@ -124,54 +129,54 @@ type brokenBeforeInterceptor struct {
 	mockInterceptor
 }
 
-func (b *brokenBeforeInterceptor) Before(w http.ResponseWriter, r *http.Request) {
+func (b *brokenBeforeInterceptor) Before() int {
 	b.beforeMethodCalled = true
-	w.WriteHeader(http.StatusInternalServerError)
+	return http.StatusInternalServerError
 }
 
 type brokenAfterInterceptor struct {
 	mockInterceptor
 }
 
-func (b *brokenAfterInterceptor) After(w http.ResponseWriter, r *http.Request) {
+func (b *brokenAfterInterceptor) After(int) int {
 	b.afterMethodCalled = true
-	w.WriteHeader(http.StatusInternalServerError)
+	return http.StatusInternalServerError
 }
 
 type mockHandler struct {
-	handleFunc   func(http.ResponseWriter, *http.Request)
+	handleFunc   func() int
 	interceptors InterceptorChain
 	methodCalled string
 }
 
-func (m *mockHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (m *mockHandler) Get() int {
 	m.methodCalled = "GET"
-	m.handleFunc(w, r)
+	return m.handleFunc()
 }
 
-func (m *mockHandler) Post(w http.ResponseWriter, r *http.Request) {
+func (m *mockHandler) Post() int {
 	m.methodCalled = "POST"
-	m.handleFunc(w, r)
+	return m.handleFunc()
 }
 
-func (m *mockHandler) Put(w http.ResponseWriter, r *http.Request) {
+func (m *mockHandler) Put() int {
 	m.methodCalled = "PUT"
-	m.handleFunc(w, r)
+	return m.handleFunc()
 }
 
-func (m *mockHandler) Delete(w http.ResponseWriter, r *http.Request) {
+func (m *mockHandler) Delete() int {
 	m.methodCalled = "DELETE"
-	m.handleFunc(w, r)
+	return m.handleFunc()
 }
 
-func (m *mockHandler) Patch(w http.ResponseWriter, r *http.Request) {
+func (m *mockHandler) Patch() int {
 	m.methodCalled = "PATCH"
-	m.handleFunc(w, r)
+	return m.handleFunc()
 }
 
-func (m *mockHandler) Head(w http.ResponseWriter, r *http.Request) {
+func (m *mockHandler) Head() int {
 	m.methodCalled = "HEAD"
-	m.handleFunc(w, r)
+	return m.handleFunc()
 }
 
 func (m *mockHandler) Interceptors() InterceptorChain {

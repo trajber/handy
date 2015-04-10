@@ -12,14 +12,18 @@ type TestInterceptorHandler struct {
 
 type DummyInterceptor struct{}
 
-func (i *DummyInterceptor) Before(w http.ResponseWriter, r *http.Request) {
+func (i *DummyInterceptor) Before() int {
 	for j := 0; j < 10000; j++ {
 	}
+
+	return 0
 }
 
-func (i *DummyInterceptor) After(w http.ResponseWriter, r *http.Request) {
+func (i *DummyInterceptor) After(int) int {
 	for j := 0; j < 10000; j++ {
 	}
+
+	return 0
 }
 
 func (t *TestInterceptorHandler) Interceptors() InterceptorChain {
@@ -33,7 +37,7 @@ func (t *TestInterceptorHandler) Interceptors() InterceptorChain {
 
 func BenchmarkInterceptorExecution(b *testing.B) {
 	mux := NewHandy()
-	mux.Handle("/foo", func() Handler {
+	mux.Handle("/foo", func(http.ResponseWriter, *http.Request, URIVars) Handler {
 		return new(TestInterceptorHandler)
 	})
 
