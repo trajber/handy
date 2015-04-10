@@ -70,6 +70,16 @@ func (r *Router) AppendRoute(uri string, h HandyFunc) error {
 		r.current = r.root
 	}()
 
+	// Special case, appending root
+	if uri == "/" {
+		if r.root.handler != nil {
+			return ErrRouteAlreadyExists
+		}
+
+		r.root.handler = h
+		return nil
+	}
+
 	appended := false
 	tokens := strings.Split(uri, "/")
 	for i, v := range tokens {
@@ -157,7 +167,7 @@ func (r *Router) Match(uri string) (*RouteMatch, error) {
 
 		n := current.findChild(v)
 		if n == nil {
-			return rt, ErrRouteNotFound
+			break
 		}
 
 		if n.isWildcard {
