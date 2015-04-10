@@ -59,7 +59,7 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value, w http.ResponseWrite
 				lower := strings.ToLower(param)
 				s.SetBool(lower == "true")
 
-			case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				n, err := strconv.ParseInt(param, 10, 64)
 				if err != nil {
 					if ErrorFunc != nil {
@@ -70,7 +70,7 @@ func (c *paramDecoder) unmarshalURIParams(st reflect.Value, w http.ResponseWrite
 				}
 				s.SetInt(n)
 
-			case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 				n, err := strconv.ParseUint(param, 10, 64)
 				if err != nil {
 					if ErrorFunc != nil {
