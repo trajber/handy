@@ -1,10 +1,8 @@
 package handy
 
-import "net/http"
-
 type Interceptor interface {
-	Before(w http.ResponseWriter, r *http.Request)
-	After(w http.ResponseWriter, r *http.Request)
+	Before() int
+	After(int) int
 }
 
 type InterceptorChain []Interceptor
@@ -22,20 +20,4 @@ type NopInterceptorChain struct{}
 
 func (n *NopInterceptorChain) Interceptors() InterceptorChain {
 	return NewInterceptorChain()
-}
-
-type BeforeInterceptorFunc func(w http.ResponseWriter, r *http.Request)
-
-func (i BeforeInterceptorFunc) Before(w http.ResponseWriter, r *http.Request) {
-	i(w, r)
-}
-
-func (i BeforeInterceptorFunc) After(w http.ResponseWriter, r *http.Request) {}
-
-type AfterInterceptorFunc func(w http.ResponseWriter, r *http.Request)
-
-func (i AfterInterceptorFunc) Before(w http.ResponseWriter, r *http.Request) {}
-
-func (i AfterInterceptorFunc) After(w http.ResponseWriter, r *http.Request) {
-	i(w, r)
 }

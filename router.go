@@ -138,15 +138,17 @@ func (n *node) findChild(name string) *node {
 	return v
 }
 
+type URIVars map[string]string
+
 type RouteMatch struct {
-	URIVars map[string]string
+	URIVars URIVars
 	Handler HandyFunc
 }
 
 // This method rebuilds a route based on a given URI
 func (r *Router) Match(uri string) (*RouteMatch, error) {
 	rt := new(RouteMatch)
-	rt.URIVars = make(map[string]string)
+	rt.URIVars = make(URIVars)
 
 	current := r.current
 	uri = strings.TrimSpace(uri)

@@ -18,7 +18,7 @@ type Handy struct {
 	Recover        func(interface{})
 }
 
-type HandyFunc func() Handler
+type HandyFunc func(http.ResponseWriter, *http.Request, URIVars) Handler
 
 func NewHandy() *Handy {
 	handy := new(Handy)
@@ -35,7 +35,7 @@ func (handy *Handy) Handle(pattern string, h HandyFunc) {
 	}
 }
 
-func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if handy.CountClients {
 		atomic.AddInt32(&handy.currentClients, 1)
 		defer atomic.AddInt32(&handy.currentClients, -1)
@@ -49,37 +49,29 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 			if handy.Recover != nil {
 				handy.Recover(r)
 			}
-			rw.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}()
 
 	route, err := handy.router.Match(r.URL.Path)
+
 	if err != nil {
 		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
-		// The server has not found anything matching the Request-URI. No indication is given of whether
-		// the condition is temporary or permanent.
-		http.NotFound(rw, r)
+		// The server has not found anything matching the Request-URI. No
+		// indication is given of whether the condition is temporary or
+		// permanent.
+		http.NotFound(w, r)
 		return
 	}
 
-	h := route.Handler()
-
-	w := NewBufferedResponseWriter(rw)
-
-	paramsDecoder := newParamDecoder(h, route.URIVars)
-	paramsDecoder.Decode(w, r)
-	// something may have be written in ParamDecoderErrorFunc
-	if w.somethingWasWritten() {
-		// aborting execution
-		w.Flush()
-		return
-	}
-
+	h := route.Handler(w, r, route.URIVars)
 	interceptors := h.Interceptors()
+	var status int
+
 	for k, interceptor := range interceptors {
-		interceptor.Before(w, r)
-		// if something was written we need to stop the execution
-		if w.somethingWasWritten() {
+		status = interceptor.Before()
+		// If the interceptor reported some status, interrupt the chain
+		if status != 0 {
 			interceptors = interceptors[:k+1]
 			goto write
 		}
@@ -87,26 +79,29 @@ func (handy *Handy) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		h.Get(w, r)
+		status = h.Get()
 	case "POST":
-		h.Post(w, r)
+		status = h.Post()
 	case "PUT":
-		h.Put(w, r)
+		status = h.Put()
 	case "DELETE":
-		h.Delete(w, r)
+		status = h.Delete()
 	case "PATCH":
-		h.Patch(w, r)
+		status = h.Patch()
 	case "HEAD":
-		h.Head(w, r)
+		status = h.Head()
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
+		status = http.StatusMethodNotAllowed
 	}
 
 write:
 	// executing all After interceptors in reverse order
-	for k := range interceptors {
-		interceptors[len(interceptors)-1-k].After(w, r)
-	}
+	for k := len(interceptors) - 1; k >= 0; k-- {
+		s := interceptors[k].After(status)
 
-	w.Flush()
+		if s != 0 {
+			status = s
+		}
+	}
 }

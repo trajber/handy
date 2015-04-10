@@ -3,48 +3,70 @@ package handy
 import "net/http"
 
 type Handler interface {
-	Get(http.ResponseWriter, *http.Request)
-	Post(http.ResponseWriter, *http.Request)
-	Put(http.ResponseWriter, *http.Request)
-	Delete(http.ResponseWriter, *http.Request)
-	Patch(http.ResponseWriter, *http.Request)
-	Head(http.ResponseWriter, *http.Request)
+	Get() int
+	Post() int
+	Put() int
+	Delete() int
+	Patch() int
+	Head() int
 	Interceptors() InterceptorChain
+}
+
+func BuildDefaultHandler(w http.ResponseWriter, r *http.Request, u URIVars) DefaultHandler {
+	return DefaultHandler{response: w, request: r, uriVars: u}
 }
 
 type DefaultHandler struct {
 	http.Handler
 	NopInterceptorChain
+
+	response http.ResponseWriter
+	request  *http.Request
+	uriVars  URIVars
 }
 
-func (s *DefaultHandler) defaultHandler(w http.ResponseWriter, r *http.Request) {
+func (s *DefaultHandler) handle() int {
 	if s.Handler != nil {
-		s.ServeHTTP(w, r)
+		s.ServeHTTP(s.response, s.request)
+		return http.StatusOK
 	} else {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		s.response.WriteHeader(http.StatusMethodNotAllowed)
+		return http.StatusMethodNotAllowed
 	}
 }
 
-func (s *DefaultHandler) Get(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (s *DefaultHandler) Get() int {
+	return s.handle()
 }
 
-func (s *DefaultHandler) Post(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (s *DefaultHandler) Post() int {
+	return s.handle()
 }
 
-func (s *DefaultHandler) Put(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (s *DefaultHandler) Put() int {
+	return s.handle()
 }
 
-func (s *DefaultHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (s *DefaultHandler) Delete() int {
+	return s.handle()
 }
 
-func (s *DefaultHandler) Patch(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (s *DefaultHandler) Patch() int {
+	return s.handle()
 }
 
-func (s *DefaultHandler) Head(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (s *DefaultHandler) Head() int {
+	return s.handle()
+}
+
+func (s *DefaultHandler) ResponseWriter() http.ResponseWriter {
+	return s.response
+}
+
+func (s *DefaultHandler) Request() *http.Request {
+	return s.request
+}
+
+func (s *DefaultHandler) URIVars() URIVars {
+	return s.uriVars
 }
