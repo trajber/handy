@@ -8,10 +8,10 @@ import (
 )
 
 type JSONCodec struct {
-	structure   interface{}
-	errPosition int
-	reqPosition int
-	resPosition int
+	structure interface{}
+	err       reflect.Value
+	request   reflect.Value
+	response  reflect.Value
 }
 
 func NewJSONCodec(st interface{}) *JSONCodec {
@@ -22,11 +22,10 @@ func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {
 	m := strings.ToLower(r.Method)
 	c.parse(m)
 
-	if c.reqPosition >= 0 {
-		st := reflect.ValueOf(c.structure).Elem()
+	if c.request.IsValid() {
 		decoder := json.NewDecoder(r.Body)
 		for {
-			if err := decoder.Decode(st.Field(c.reqPosition).Addr().Interface()); err != nil {
+			if err := decoder.Decode(c.request.Addr().Interface()); err != nil {
 				break
 			}
 		}
@@ -34,12 +33,11 @@ func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
-	st := reflect.ValueOf(c.structure).Elem()
-
-	if c.errPosition >= 0 {
-		if elem := st.Field(c.errPosition).Interface(); elem != nil {
+	if c.err.IsValid() {
+		if elem := c.err.Interface(); elem != nil {
 			elemType := reflect.TypeOf(elem)
-			if elemType.Kind() == reflect.Ptr && !st.Field(c.errPosition).IsNil() {
+			if elemType.Kind() == reflect.Ptr && !c.err.IsNil() {
+				w.Header().Set("Content-Type", "application/json")
 				encoder := json.NewEncoder(w)
 				encoder.Encode(elem)
 				return
@@ -47,37 +45,37 @@ func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if c.resPosition >= 0 {
-		elem := st.Field(c.resPosition).Interface()
+	if c.response.IsValid() {
+		elem := c.response.Interface()
 		elemType := reflect.TypeOf(elem)
-		if elemType.Kind() == reflect.Ptr && st.Field(c.resPosition).IsNil() {
+		if elemType.Kind() == reflect.Ptr && c.response.IsNil() {
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
 		encoder := json.NewEncoder(w)
 		encoder.Encode(elem)
 	}
 }
 
 func (c *JSONCodec) parse(m string) {
-	c.errPosition, c.reqPosition, c.resPosition = -1, -1, -1
-
 	st := reflect.ValueOf(c.structure).Elem()
+
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Type().Field(i)
+		value := st.Field(i)
 
-		value := field.Tag.Get("request")
-		if value == "all" || strings.Contains(value, m) {
-			c.reqPosition = i
+		tag := field.Tag.Get("request")
+		if tag == "all" || strings.Contains(tag, m) {
+			c.request = value
 			continue
 		}
 
-		value = field.Tag.Get("response")
-
-		if value == "all" || strings.Contains(value, m) {
-			c.resPosition = i
-		} else if value == "error" {
-			c.errPosition = i
+		tag = field.Tag.Get("response")
+		if tag == "all" || strings.Contains(tag, m) {
+			c.response = value
+		} else if tag == "error" {
+			c.err = value
 		}
 	}
 }
