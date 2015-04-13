@@ -30,21 +30,21 @@ func TestIntrospectorBefore(t *testing.T) {
 	if first, ok := object.Field("one", "um").(*int); !ok || &object.First != first {
 		t.Errorf("It didn't retrieved the right value. Expecting “%#v”; found “%#v”", first, object.Field("one", "um"))
 
-	} else if values, _ := object.FieldValues("one"); len(values) != 1 {
+	} else if values := object.FieldsWithTag("one"); len(values) != 1 {
 		t.Errorf("Wrong number of values for tag “one”: “%d”", len(values))
 	}
 
 	if second, ok := object.Field("two", "dois").(*string); !ok || &object.Second != second {
 		t.Errorf("It didn't retrieved the right value. Expecting “%#v”; found “%#v”", second, object.Field("second", "dois"))
 
-	} else if values, _ := object.FieldValues("two"); len(values) != 2 {
+	} else if values := object.FieldsWithTag("two"); len(values) != 2 {
 		t.Errorf("Wrong number of values for tag “two”: “%d”", len(values))
 	}
 
 	if fourth, ok := object.Field("four", "quatro").(*bool); !ok || object.Fourth != fourth {
 		t.Errorf("It didn't retrieved the right value. Expecting “%#v”; found “%#v”", fourth, object.Field("fourth", "quatro"))
 
-	} else if values, _ := object.FieldValues("four"); len(values) != 2 {
+	} else if values := object.FieldsWithTag("four"); len(values) != 2 {
 		t.Errorf("Wrong number of values for tag “four”: “%d”", len(values))
 	}
 }

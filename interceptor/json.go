@@ -9,28 +9,27 @@ import (
 
 type jsonHandler interface {
 	Field(string, string) interface{}
-	Req() *http.Request
-	ResponseWriter() http.ResponseWriter
 }
 
 type JSONCodec struct {
-	handler jsonHandler
+	handler  jsonHandler
+	response http.ResponseWriter
+	request  *http.Request
 }
 
-func NewJSONCodec(h jsonHandler) *JSONCodec {
-	return &JSONCodec{h}
+func NewJSONCodec(h jsonHandler, w http.ResponseWriter, r *http.Request) *JSONCodec {
+	return &JSONCodec{handler: h, response: w, request: r}
 }
 
 func (j *JSONCodec) Before() int {
-	request := j.handler.Req()
-	m := strings.ToLower(request.Method)
+	m := strings.ToLower(j.request.Method)
 	requestField := j.handler.Field("request", m)
 
 	if requestField == nil {
 		return 0
 	}
 
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(j.request.Body)
 
 	for {
 		if err := decoder.Decode(requestField); err != nil {
@@ -53,16 +52,14 @@ func (j *JSONCodec) After(status int) int {
 		header = headerField.(http.Header)
 	}
 
-	w := j.handler.ResponseWriter()
-
 	for k, values := range header {
 		for _, value := range values {
-			w.Header().Add(k, value)
+			j.response.Header().Add(k, value)
 		}
 	}
 
 	var response interface{}
-	method := strings.ToLower(j.handler.Req().Method)
+	method := strings.ToLower(j.request.Method)
 
 	if responseAll := j.handler.Field("response", "all"); responseAll != nil {
 		response = responseAll
@@ -72,13 +69,13 @@ func (j *JSONCodec) After(status int) int {
 	}
 
 	if response == nil {
-		w.WriteHeader(status)
+		j.response.WriteHeader(status)
 		return status
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(response)
+	j.response.Header().Set("Content-Type", "application/json")
+	j.response.WriteHeader(status)
+	json.NewEncoder(j.response).Encode(response)
 
 	return status
 }

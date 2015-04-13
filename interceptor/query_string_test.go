@@ -40,7 +40,7 @@ func TestQueryStringBefore(t *testing.T) {
 
 	i := NewIntrospector(&handler)
 	i.Before()
-	u := NewQueryString(&handler)
+	u := NewQueryString(request, handler.FieldsWithTag("query"))
 	code := u.Before()
 
 	if code != 0 {

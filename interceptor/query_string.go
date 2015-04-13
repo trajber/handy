@@ -1,43 +1,29 @@
 package interceptor
 
-import (
-	"net/http"
-	"reflect"
-)
-
-type queryStringHandler interface {
-	FieldValues(tag string) (map[string]reflect.Value, bool)
-	Field(string, string) interface{}
-	Req() *http.Request
-}
+import "net/http"
 
 type QueryString struct {
 	NoAfterInterceptor
 
-	handler queryStringHandler
+	request *http.Request
+	fields  map[string]interface{}
 }
 
-func NewQueryString(h queryStringHandler) *QueryString {
-	return &QueryString{handler: h}
+func NewQueryString(r *http.Request, f map[string]interface{}) *QueryString {
+	return &QueryString{request: r, fields: f}
 }
 
 func (q *QueryString) Before() int {
-	queries, ok := q.handler.FieldValues("query")
-
-	if !ok {
+	if q.fields == nil {
 		return 0
 	}
 
-	request := q.handler.Req()
-
-	for k := range queries {
-		field := q.handler.Field("query", k)
-
+	for k, field := range q.fields {
 		if field == nil {
 			continue
 		}
 
-		if err := setValue(field, request.FormValue(k)); err != nil {
+		if err := setValue(field, q.request.FormValue(k)); err != nil {
 			return http.StatusBadRequest
 		}
 	}

@@ -50,7 +50,7 @@ func TestURIVarsBefore(t *testing.T) {
 
 	i := NewIntrospector(&handler)
 	i.Before()
-	u := NewURIVars(&handler)
+	u := NewURIVars(urivars, handler.FieldsWithTag("urivar"))
 	code := u.Before()
 
 	if code != 0 {

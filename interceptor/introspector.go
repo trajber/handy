@@ -9,7 +9,7 @@ import (
 
 var tagFormat = regexp.MustCompile(`(\w+):"([^"]+)"`)
 
-type structFields map[string]map[string]reflect.Value
+type structFields map[string]map[string]interface{}
 
 type setFielder interface {
 	SetFields(structFields)
@@ -49,10 +49,10 @@ func (i *Introspector) Before() int {
 
 				for _, value := range strings.Split(values, ",") {
 					if _, ok := fields[name]; !ok {
-						fields[name] = make(map[string]reflect.Value)
+						fields[name] = make(map[string]interface{})
 					}
 
-					fields[name][value] = st.Field(i)
+					fields[name][value] = emptyInterface(st.Field(i))
 				}
 			}
 		}
@@ -60,6 +60,18 @@ func (i *Introspector) Before() int {
 
 	i.structure.SetFields(fields)
 	return 0
+}
+
+func emptyInterface(v reflect.Value) interface{} {
+	if !v.IsValid() || !v.CanInterface() {
+		return nil
+	}
+
+	if v.Kind() == reflect.Ptr || !v.CanAddr() {
+		return v.Interface()
+	}
+
+	return v.Addr().Interface()
 }
 
 type IntrospectorEmbedded struct {
@@ -77,20 +89,15 @@ func (i *IntrospectorEmbedded) Field(tag, value string) interface{} {
 		return nil
 	}
 
-	v, found := values[value]
+	f, found := values[value]
 
-	if !found || !v.IsValid() || !v.CanInterface() {
+	if !found {
 		return nil
 	}
 
-	if v.Kind() == reflect.Ptr || !v.CanAddr() {
-		return v.Interface()
-	}
-
-	return v.Addr().Interface()
+	return f
 }
 
-func (i *IntrospectorEmbedded) FieldValues(tag string) (map[string]reflect.Value, bool) {
-	values, ok := i.fields[tag]
-	return values, ok
+func (i *IntrospectorEmbedded) FieldsWithTag(tag string) map[string]interface{} {
+	return i.fields[tag]
 }

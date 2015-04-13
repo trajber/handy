@@ -5,24 +5,20 @@ import (
 	"net/http"
 )
 
-type uriVarsHandler interface {
-	Field(string, string) interface{}
-	URIVars() handy.URIVars
-}
-
 type URIVars struct {
 	NoAfterInterceptor
 
-	handler uriVarsHandler
+	uriVars handy.URIVars
+	fields  map[string]interface{}
 }
 
-func NewURIVars(h uriVarsHandler) *URIVars {
-	return &URIVars{handler: h}
+func NewURIVars(u handy.URIVars, f map[string]interface{}) *URIVars {
+	return &URIVars{uriVars: u, fields: f}
 }
 
 func (u *URIVars) Before() int {
-	for k, value := range u.handler.URIVars() {
-		field := u.handler.Field("urivar", k)
+	for k, value := range u.uriVars {
+		field := u.fields[k]
 
 		if field == nil {
 			continue
