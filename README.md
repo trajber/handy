@@ -41,7 +41,7 @@ func (h *MyHandler) Get() int {
 ~~~
 
 # Interceptors
-The true power of this framework comes from the use of interceptors. They are special units that are called before and after every handler method call. With interceptors, one can automate most of the repetitive tasks involving a request handling, like setting up and committing the database transaction, JSON serialisation and to automatically decode URI parameters.
+The true power of this framework comes from the use of interceptors. They are special units that are called before and after every handler method call. With interceptors, one can automate most of the repetitive tasks involving a request handling, like the setup and commit of a database transaction, JSON serialisation and automatic decode of URI parameters.
 
 If the handler register the interceptor chain `[a, b, c]`, the framework will call, in order:
 ~~~
@@ -285,6 +285,24 @@ type MyResponse struct {
 }
 ~~~
 
+Thanks to the fact that the URIVar interceptor supports TextUnmarshalers, one can use it to automatically validate a URI variable before it reaches the handler:
+~~~go
+type limitedString string
+
+func (l *limitedString) UnmarshalText(data []byte) error {
+	text := string(data)
+	length := len(text)
+
+	if length < 5 || length > 50 {
+		return errors.New("Wrong size for parameter")
+	}
+
+	*l = text
+	return nil
+}
+~~~
+
+You can do the same with the QueryString interceptor, also included in the handy/interceptor package.
 
 #Logging
 Bad things happens even inside Handy; You can set your own function to handle Handy errors.
