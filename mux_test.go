@@ -48,7 +48,7 @@ func TestInterceptorOrder(t *testing.T) {
 		}
 
 		uri := fmt.Sprintf("/uri/%d", i)
-		mux.Handle(uri, func(http.ResponseWriter, *http.Request, URIVars) Handler {
+		mux.Handle(uri, func() Handler {
 			return handler
 		})
 
@@ -144,6 +144,7 @@ func (b *brokenAfterInterceptor) After(int) int {
 }
 
 type mockHandler struct {
+	DefaultHandler
 	handleFunc   func() int
 	interceptors InterceptorChain
 	methodCalled string

@@ -25,7 +25,7 @@ func TestURIVarsBefore(t *testing.T) {
 		"ip":  "192.168.0.1",
 	}
 
-	handler := struct {
+	handler := &struct {
 		IntrospectorEmbedded
 		handy.DefaultHandler
 
@@ -44,11 +44,10 @@ func TestURIVarsBefore(t *testing.T) {
 		F32 float32 `urivar:"f32"`
 		F64 float64 `urivar:"f64"`
 		IP  net.IP  `urivar:"ip"`
-	}{
-		DefaultHandler: handy.BuildDefaultHandler(nil, nil, urivars),
-	}
+	}{}
 
-	i := NewIntrospector(&handler)
+	handy.SetHandlerInfo(handler, nil, nil, urivars)
+	i := NewIntrospector(handler)
 	i.Before()
 	u := NewURIVars(urivars, handler.FieldsWithTag("urivar"))
 	code := u.Before()

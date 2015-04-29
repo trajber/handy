@@ -15,7 +15,7 @@ func TestQueryStringBefore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	handler := struct {
+	handler := &struct {
 		IntrospectorEmbedded
 		handy.DefaultHandler
 
@@ -34,11 +34,10 @@ func TestQueryStringBefore(t *testing.T) {
 		F32 float32 `query:"f32"`
 		F64 float64 `query:"f64"`
 		IP  net.IP  `query:"ip"`
-	}{
-		DefaultHandler: handy.BuildDefaultHandler(nil, request, nil),
-	}
+	}{}
 
-	i := NewIntrospector(&handler)
+	handy.SetHandlerInfo(handler, nil, request, nil)
+	i := NewIntrospector(handler)
 	i.Before()
 	u := NewQueryString(request, handler.FieldsWithTag("query"))
 	code := u.Before()

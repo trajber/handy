@@ -10,10 +10,7 @@ type Handler interface {
 	Patch() int
 	Head() int
 	Interceptors() InterceptorChain
-}
-
-func BuildDefaultHandler(w http.ResponseWriter, r *http.Request, u URIVars) DefaultHandler {
-	return DefaultHandler{response: w, request: r, uriVars: u}
+	setRequestInfo(w http.ResponseWriter, r *http.Request, u URIVars)
 }
 
 type DefaultHandler struct {
@@ -25,48 +22,52 @@ type DefaultHandler struct {
 	uriVars  URIVars
 }
 
-func (s *DefaultHandler) handle() int {
-	if s.Handler != nil {
-		s.ServeHTTP(s.response, s.request)
+func (d *DefaultHandler) handle() int {
+	if d.Handler != nil {
+		d.ServeHTTP(d.response, d.request)
 		return http.StatusOK
 	} else {
-		s.response.WriteHeader(http.StatusMethodNotAllowed)
+		d.response.WriteHeader(http.StatusMethodNotAllowed)
 		return http.StatusMethodNotAllowed
 	}
 }
 
-func (s *DefaultHandler) Get() int {
-	return s.handle()
+func (d *DefaultHandler) Get() int {
+	return d.handle()
 }
 
-func (s *DefaultHandler) Post() int {
-	return s.handle()
+func (d *DefaultHandler) Post() int {
+	return d.handle()
 }
 
-func (s *DefaultHandler) Put() int {
-	return s.handle()
+func (d *DefaultHandler) Put() int {
+	return d.handle()
 }
 
-func (s *DefaultHandler) Delete() int {
-	return s.handle()
+func (d *DefaultHandler) Delete() int {
+	return d.handle()
 }
 
-func (s *DefaultHandler) Patch() int {
-	return s.handle()
+func (d *DefaultHandler) Patch() int {
+	return d.handle()
 }
 
-func (s *DefaultHandler) Head() int {
-	return s.handle()
+func (d *DefaultHandler) Head() int {
+	return d.handle()
 }
 
-func (s *DefaultHandler) ResponseWriter() http.ResponseWriter {
-	return s.response
+func (d *DefaultHandler) ResponseWriter() http.ResponseWriter {
+	return d.response
 }
 
-func (s *DefaultHandler) Req() *http.Request {
-	return s.request
+func (d *DefaultHandler) Req() *http.Request {
+	return d.request
 }
 
-func (s *DefaultHandler) URIVars() URIVars {
-	return s.uriVars
+func (d *DefaultHandler) URIVars() URIVars {
+	return d.uriVars
+}
+
+func (d *DefaultHandler) setRequestInfo(w http.ResponseWriter, r *http.Request, u URIVars) {
+	*d = DefaultHandler{response: w, request: r, uriVars: u}
 }

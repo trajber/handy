@@ -34,7 +34,7 @@ func BenchmarkDecodeJSON(b *testing.B) {
 		handy.DefaultHandler
 		Request TestStruct `request:"get"`
 	})
-	handler.DefaultHandler = handy.BuildDefaultHandler(w, req, nil)
+	handy.SetHandlerInfo(handler, w, req, nil)
 	codec := NewJSONCodec(handler, w, req)
 
 	b.ResetTimer()

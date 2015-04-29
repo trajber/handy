@@ -18,7 +18,11 @@ type Handy struct {
 	Recover        func(interface{})
 }
 
-type HandyFunc func(http.ResponseWriter, *http.Request, URIVars) Handler
+type Constructor func() Handler
+
+func SetHandlerInfo(h Handler, w http.ResponseWriter, r *http.Request, u URIVars) {
+	h.setRequestInfo(w, r, u)
+}
 
 func NewHandy() *Handy {
 	handy := new(Handy)
@@ -26,7 +30,7 @@ func NewHandy() *Handy {
 	return handy
 }
 
-func (handy *Handy) Handle(pattern string, h HandyFunc) {
+func (handy *Handy) Handle(pattern string, h Constructor) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
@@ -64,7 +68,8 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h := route.Handler(w, r, route.URIVars)
+	h := route.Handler()
+	SetHandlerInfo(h, w, r, route.URIVars)
 	interceptors := h.Interceptors()
 	var status int
 

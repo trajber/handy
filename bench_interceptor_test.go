@@ -37,7 +37,7 @@ func (t *TestInterceptorHandler) Interceptors() InterceptorChain {
 
 func BenchmarkInterceptorExecution(b *testing.B) {
 	mux := NewHandy()
-	mux.Handle("/foo", func(http.ResponseWriter, *http.Request, URIVars) Handler {
+	mux.Handle("/foo", func() Handler {
 		return new(TestInterceptorHandler)
 	})
 
