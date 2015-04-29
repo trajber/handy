@@ -1,21 +1,26 @@
 package interceptor
 
-import (
-	"net/http"
-)
-
 type NoBeforeInterceptor struct{}
 
-func (i *NoBeforeInterceptor) Before(w http.ResponseWriter, r *http.Request) {}
+func (i *NoBeforeInterceptor) Before() int {
+	return 0
+}
 
 type NoAfterInterceptor struct{}
 
-func (i *NoAfterInterceptor) After(w http.ResponseWriter, r *http.Request) {}
+func (i *NoAfterInterceptor) After(status int) int {
+	return status
+}
 
 type NopInterceptor struct{}
 
-func (i *NopInterceptor) Before(w http.ResponseWriter, r *http.Request) {}
-func (i *NopInterceptor) After(w http.ResponseWriter, r *http.Request)  {}
+func (i *NopInterceptor) Before() int {
+	return 0
+}
+
+func (i *NopInterceptor) After(status int) int {
+	return status
+}
 
 type BeforeInterceptorFunc func() int
 
