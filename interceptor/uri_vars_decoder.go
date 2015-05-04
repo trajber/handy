@@ -1,8 +1,9 @@
 package interceptor
 
 import (
-	"handy"
 	"net/http"
+
+	"github.com/gustavo-hms/handy"
 )
 
 type URIVars struct {
