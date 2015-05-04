@@ -8,8 +8,7 @@ type Interceptor interface {
 type InterceptorChain []Interceptor
 
 func (c InterceptorChain) Chain(f Interceptor) InterceptorChain {
-	c = append(c, f)
-	return c
+	return append(c, f)
 }
 
 func NewInterceptorChain() InterceptorChain {
