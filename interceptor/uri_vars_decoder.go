@@ -6,20 +6,24 @@ import (
 	"github.com/gustavo-hms/handy"
 )
 
+type uriVarsHandler interface {
+	URIVars() handy.URIVars
+	Field(string, string) interface{}
+}
+
 type URIVars struct {
 	NoAfterInterceptor
 
-	uriVars handy.URIVars
-	fields  map[string]interface{}
+	handler uriVarsHandler
 }
 
-func NewURIVars(u handy.URIVars, f map[string]interface{}) *URIVars {
-	return &URIVars{uriVars: u, fields: f}
+func NewURIVars(h uriVarsHandler) *URIVars {
+	return &URIVars{handler: h}
 }
 
 func (u *URIVars) Before() int {
-	for k, value := range u.uriVars {
-		field := u.fields[k]
+	for k, value := range u.handler.URIVars() {
+		field := u.handler.Field("urivar", k)
 
 		if field == nil {
 			continue

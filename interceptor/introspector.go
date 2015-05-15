@@ -1,7 +1,6 @@
 package interceptor
 
 import (
-	"net/http"
 	"reflect"
 	"regexp"
 	"strings"
@@ -9,10 +8,10 @@ import (
 
 var tagFormat = regexp.MustCompile(`(\w+):"([^"]+)"`)
 
-type structFields map[string]map[string]interface{}
+type StructFields map[string]map[string]reflect.Value
 
 type setFielder interface {
-	SetFields(structFields)
+	SetFields(StructFields)
 }
 
 type Introspector struct {
@@ -28,7 +27,7 @@ func NewIntrospector(st setFielder) *Introspector {
 func (i *Introspector) Before() int {
 	st := reflect.ValueOf(i.structure).Elem()
 	typ := st.Type()
-	fields := make(structFields)
+	fields := make(StructFields)
 
 	for i := 0; i < st.NumField(); i++ {
 		field := typ.Field(i)
@@ -41,18 +40,14 @@ func (i *Introspector) Before() int {
 			tags := tagFormat.FindAllStringSubmatch(ts, -1)
 
 			for _, tagParts := range tags {
-				if len(tagParts) != 3 {
-					return http.StatusInternalServerError
-				}
-
 				name, values := tagParts[1], tagParts[2]
 
 				for _, value := range strings.Split(values, ",") {
 					if _, ok := fields[name]; !ok {
-						fields[name] = make(map[string]interface{})
+						fields[name] = make(map[string]reflect.Value)
 					}
 
-					fields[name][value] = emptyInterface(st.Field(i))
+					fields[name][value] = st.Field(i)
 				}
 			}
 		}
@@ -68,21 +63,43 @@ func emptyInterface(v reflect.Value) interface{} {
 	}
 
 	if v.Kind() == reflect.Ptr || !v.CanAddr() {
+		if v.IsNil() {
+			return nil
+		}
+
 		return v.Interface()
 	}
 
 	return v.Addr().Interface()
 }
 
-type IntrospectorEmbedded struct {
-	fields structFields
+type IntrospectorCompliant struct {
+	fields StructFields
 }
 
-func (i *IntrospectorEmbedded) SetFields(fields structFields) {
+func (i *IntrospectorCompliant) SetFields(fields StructFields) {
 	i.fields = fields
 }
 
-func (i *IntrospectorEmbedded) Field(tag, value string) interface{} {
+func (i *IntrospectorCompliant) SetField(tag, value string, data interface{}) {
+	values, found := i.fields[tag]
+
+	if !found {
+		return
+	}
+
+	f, found := values[value]
+
+	if !found {
+		return
+	}
+
+	if f.CanSet() {
+		f.Set(reflect.ValueOf(data))
+	}
+}
+
+func (i *IntrospectorCompliant) Field(tag, value string) interface{} {
 	values, found := i.fields[tag]
 
 	if !found {
@@ -95,9 +112,15 @@ func (i *IntrospectorEmbedded) Field(tag, value string) interface{} {
 		return nil
 	}
 
-	return f
+	return emptyInterface(f)
 }
 
-func (i *IntrospectorEmbedded) FieldsWithTag(tag string) map[string]interface{} {
-	return i.fields[tag]
+func (i *IntrospectorCompliant) KeysWithTag(tag string) []string {
+	keys := make([]string, 0, len(i.fields[tag]))
+
+	for k := range i.fields[tag] {
+		keys = append(keys, k)
+	}
+
+	return keys
 }

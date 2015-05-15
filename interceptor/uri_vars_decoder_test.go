@@ -1,55 +1,64 @@
 package interceptor
 
 import (
-	"handy"
 	"net"
+	"net/http"
 	"testing"
+
+	"github.com/gustavo-hms/handy"
 )
+
+type mockURIVarsHandler struct {
+	handy.DefaultHandler
+	IntrospectorCompliant
+
+	urivars handy.URIVars
+
+	S   string  `urivar:"s"`
+	B   bool    `urivar:"b"`
+	I   int     `urivar:"i"`
+	I8  int8    `urivar:"i8"`
+	I16 int16   `urivar:"i16"`
+	I32 int32   `urivar:"i32"`
+	I64 int64   `urivar:"i64"`
+	U   uint    `urivar:"u"`
+	U8  uint8   `urivar:"u8"`
+	U16 uint16  `urivar:"u16"`
+	U32 uint32  `urivar:"u32"`
+	U64 uint64  `urivar:"u64"`
+	F32 float32 `urivar:"f32"`
+	F64 float64 `urivar:"f64"`
+	IP  net.IP  `urivar:"ip"`
+}
+
+func (m mockURIVarsHandler) URIVars() handy.URIVars {
+	return m.urivars
+}
 
 func TestURIVarsBefore(t *testing.T) {
 	urivars := map[string]string{
-		"s":   "Eita!",
-		"b":   "true",
-		"i":   "17",
-		"i8":  "18",
-		"i16": "19",
-		"i32": "20",
-		"i64": "21",
-		"u":   "22",
-		"u8":  "23",
-		"u16": "24",
-		"u32": "25",
-		"u64": "26",
-		"f32": "27.1",
-		"f64": "27.2",
-		"ip":  "192.168.0.1",
+		"s":     "Eita!",
+		"b":     "true",
+		"i":     "17",
+		"i8":    "18",
+		"i16":   "19",
+		"i32":   "20",
+		"i64":   "21",
+		"u":     "22",
+		"u8":    "23",
+		"u16":   "24",
+		"u32":   "25",
+		"u64":   "26",
+		"f32":   "27.1",
+		"f64":   "27.2",
+		"ip":    "192.168.0.1",
+		"extra": "Extra field",
 	}
 
-	handler := &struct {
-		IntrospectorEmbedded
-		handy.DefaultHandler
-
-		S   string  `urivar:"s"`
-		B   bool    `urivar:"b"`
-		I   int     `urivar:"i"`
-		I8  int8    `urivar:"i8"`
-		I16 int16   `urivar:"i16"`
-		I32 int32   `urivar:"i32"`
-		I64 int64   `urivar:"i64"`
-		U   uint    `urivar:"u"`
-		U8  uint8   `urivar:"u8"`
-		U16 uint16  `urivar:"u16"`
-		U32 uint32  `urivar:"u32"`
-		U64 uint64  `urivar:"u64"`
-		F32 float32 `urivar:"f32"`
-		F64 float64 `urivar:"f64"`
-		IP  net.IP  `urivar:"ip"`
-	}{}
-
-	handy.SetHandlerInfo(handler, nil, nil, urivars)
+	handler := &mockURIVarsHandler{urivars: urivars}
 	i := NewIntrospector(handler)
 	i.Before()
-	u := NewURIVars(urivars, handler.FieldsWithTag("urivar"))
+	u := NewURIVars(handler)
 	code := u.Before()
 
 	if code != 0 {
@@ -114,5 +123,16 @@ func TestURIVarsBefore(t *testing.T) {
 
 	if handler.IP == nil || !handler.IP.Equal(net.ParseIP("192.168.0.1")) {
 		t.Errorf("Wrong value. Expecting “192.168.0.1”; found “%s”", handler.IP)
+	}
+
+	urivars["i"] = "dezessete"
+	handler = &mockURIVarsHandler{urivars: urivars}
+	i = NewIntrospector(handler)
+	i.Before()
+	u = NewURIVars(handler)
+	code = u.Before()
+
+	if code != http.StatusBadRequest {
+		t.Errorf("Unexpected status code. Expecting “%d”; found “%d”", http.StatusBadRequest, code)
 	}
 }
