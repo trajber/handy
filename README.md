@@ -118,7 +118,7 @@ type MyResponse struct {
 
 type MyHandler struct {
 	handy.DefaultHandler
-	interceptor.IntrospectorEmbedded
+	interceptor.IntrospectorCompliant
 
 	// this structure will be used only for GET and PUT methods
 	Response MyResponse `response:"get,put"` 
@@ -130,7 +130,7 @@ Now, you just need to include JSONCodec in the handler's interceptor chain:
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
 	return handy.NewInterceptorChain()
 		.Chain(inteceptor.NewIntrospector(h))
-		.Chain(inteceptor.NewJSONCodec(h, h.ResponseWriter(), h.Req()))
+		.Chain(inteceptor.NewJSONCodec(h))
 }
 ~~~
 
@@ -155,7 +155,7 @@ func main() {
 
 type MyHandler struct {
     handy.DefaultHandler
-	interceptor.IntrospectorEmbedded
+	interceptor.IntrospectorCompliant
 
     Response MyResponse `response:"all"`
 }
@@ -168,7 +168,7 @@ func (h *MyHandler) Get() int {
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
 	return handy.NewInterceptorChain()
 		.Chain(inteceptor.NewIntrospector(h))
-		.Chain(inteceptor.NewJSONCodec(h, h.ResponseWriter(), h.Req()))
+		.Chain(inteceptor.NewJSONCodec(h))
 }
 
 type MyResponse struct {
@@ -198,7 +198,7 @@ func main() {
 
 type MyHandler struct {
 	handy.DefaultHandler
-	interceptor.IntrospectorEmbedded
+	interceptor.IntrospectorCompliant
 
 	Response MyResponse `response:"post"`
 	Request  MyRequest  `request:"post"`
@@ -212,7 +212,7 @@ func (h *MyHandler) Post() int {
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
 	return handy.NewInterceptorChain()
 		.Chain(inteceptor.NewIntrospector(h))
-		.Chain(inteceptor.NewJSONCodec(h, h.ResponseWriter(), h.Req()))
+		.Chain(inteceptor.NewJSONCodec(h))
 }
 
 type MyResponse struct {
@@ -261,7 +261,7 @@ srv := handy.NewHandy()
 
 type MyHandler struct {
 	handy.DefaultHandler
-	interceptor.IntrospectorEmbedded
+	interceptor.IntrospectorCompliant
 
 	User     string     `urivar:"user"`
 	IP       net.IP     `urivar:"ip"`
@@ -276,8 +276,8 @@ func (h *MyHandler) Get() int {
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
 	return handy.NewInterceptorChain()
 		.Chain(inteceptor.NewIntrospector(h))
-		.Chain(inteceptor.NewJSONCodec(h, h.ResponseWriter(), h.Req()))
-		.Chain(inteceptor.NewURIVars(h.URIVars(), h.FieldsWithTag("urivar")))
+		.Chain(inteceptor.NewJSONCodec(h))
+		.Chain(inteceptor.NewURIVars(h))
 }
 
 type MyResponse struct {
