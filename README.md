@@ -24,8 +24,8 @@ import (
 
 func main() {
 	srv := handy.NewHandy()
-	srv.Handle("/hello", func(w http.ResponseWriter, r *http.Request, u handy.URIVars) handy.Handler {
-		return &MyHandler{handy.BuildDefaultHandler(w, r, u)}
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
 	})
 	log.Fatal(http.ListenAndServe(":8080", srv))
 }
@@ -74,8 +74,8 @@ import (
 
 func main() {
 	srv := handy.NewHandy()
-	srv.Handle("/hello", func(w http.ResponseWriter, r *http.Request, u handy.URIVars) handy.Handler {
-		return &MyHandler{handy.BuildDefaultHandler(w, r, u)}
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
 	})
 	log.Fatal(http.ListenAndServe(":8080", srv))
 }
@@ -147,8 +147,8 @@ import (
 
 func main() {
     srv := handy.NewHandy()
-	srv.Handle("/hello", func(w http.ResponseWriter, r *http.Request, u handy.URIVars) handy.Handler {
-		return &MyHandler{handy.BuildDefaultHandler(w, r, u)}
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
 	})
     log.Fatal(http.ListenAndServe(":8080", srv))
 }
@@ -190,8 +190,8 @@ import (
 
 func main() {
 	srv := handy.NewHandy()
-	srv.Handle("/hello", func(w http.ResponseWriter, r *http.Request, u handy.URIVars) handy.Handler {
-		return &MyHandler{handy.BuildDefaultHandler(w, r, u)}
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
 	})
 	log.Fatal(http.ListenAndServe(":8181", srv))
 }
@@ -253,8 +253,8 @@ import (
 
 func main() {
 srv := handy.NewHandy()
-	srv.Handle("/user/{user}/machine/{ip}", func(w http.ResponseWriter, r *http.Request, u handy.URIVars) handy.Handler {
-		return &MyHandler{handy.BuildDefaultHandler(w, r, u)}
+	srv.Handle("/user/{user}/machine/{ip}", func() handy.Handler {
+		return &MyHandler{}
 	})
 	log.Fatal(http.ListenAndServe(":8181", srv))
 }
@@ -324,8 +324,8 @@ func main() {
     	// here you can handle the error
     	log.Println(e)
   	}
-	srv.Handle("/hello", func(w http.ResponseWriter, r *http.Request, u handy.URIVars) handy.Handler {
-		return &MyHandler{handy.BuildDefaultHandler(w, r, u)}
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
 	})
 
     log.Fatal(http.ListenAndServe(":8080", srv))
