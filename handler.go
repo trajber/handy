@@ -14,7 +14,6 @@ type Handler interface {
 }
 
 type DefaultHandler struct {
-	http.Handler
 	NopInterceptorChain
 
 	response http.ResponseWriter
@@ -22,38 +21,28 @@ type DefaultHandler struct {
 	uriVars  URIVars
 }
 
-func (d *DefaultHandler) handle() int {
-	if d.Handler != nil {
-		d.ServeHTTP(d.response, d.request)
-		return http.StatusOK
-	} else {
-		d.response.WriteHeader(http.StatusMethodNotAllowed)
-		return http.StatusMethodNotAllowed
-	}
-}
-
 func (d *DefaultHandler) Get() int {
-	return d.handle()
+	return http.StatusMethodNotAllowed
 }
 
 func (d *DefaultHandler) Post() int {
-	return d.handle()
+	return http.StatusMethodNotAllowed
 }
 
 func (d *DefaultHandler) Put() int {
-	return d.handle()
+	return http.StatusMethodNotAllowed
 }
 
 func (d *DefaultHandler) Delete() int {
-	return d.handle()
+	return http.StatusMethodNotAllowed
 }
 
 func (d *DefaultHandler) Patch() int {
-	return d.handle()
+	return http.StatusMethodNotAllowed
 }
 
 func (d *DefaultHandler) Head() int {
-	return d.handle()
+	return http.StatusMethodNotAllowed
 }
 
 func (d *DefaultHandler) ResponseWriter() http.ResponseWriter {
