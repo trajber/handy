@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gustavo-hms/handy"
+	"github.com/trajber/handy"
 )
 
 type mockURIVarsHandler struct {

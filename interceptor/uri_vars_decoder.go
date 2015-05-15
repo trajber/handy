@@ -3,7 +3,7 @@ package interceptor
 import (
 	"net/http"
 
-	"github.com/gustavo-hms/handy"
+	"github.com/trajber/handy"
 )
 
 type uriVarsHandler interface {

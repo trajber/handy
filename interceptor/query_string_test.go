@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"testing"
 
-	"br/Godeps/_workspace/src/github.com/gustavo-hms/handy"
+	"github.com/trajber/handy"
 )
 
 type mockQueryStringHandler struct {
