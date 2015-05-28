@@ -3,48 +3,60 @@ package handy
 import "net/http"
 
 type Handler interface {
-	Get(http.ResponseWriter, *http.Request)
-	Post(http.ResponseWriter, *http.Request)
-	Put(http.ResponseWriter, *http.Request)
-	Delete(http.ResponseWriter, *http.Request)
-	Patch(http.ResponseWriter, *http.Request)
-	Head(http.ResponseWriter, *http.Request)
+	Get() int
+	Post() int
+	Put() int
+	Delete() int
+	Patch() int
+	Head() int
 	Interceptors() InterceptorChain
+	setRequestInfo(w http.ResponseWriter, r *http.Request, u URIVars)
 }
 
 type DefaultHandler struct {
-	http.Handler
 	NopInterceptorChain
+
+	response http.ResponseWriter
+	request  *http.Request
+	uriVars  URIVars
 }
 
-func (s *DefaultHandler) defaultHandler(w http.ResponseWriter, r *http.Request) {
-	if s.Handler != nil {
-		s.ServeHTTP(w, r)
-	} else {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}
+func (d *DefaultHandler) Get() int {
+	return http.StatusMethodNotAllowed
 }
 
-func (s *DefaultHandler) Get(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (d *DefaultHandler) Post() int {
+	return http.StatusMethodNotAllowed
 }
 
-func (s *DefaultHandler) Post(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (d *DefaultHandler) Put() int {
+	return http.StatusMethodNotAllowed
 }
 
-func (s *DefaultHandler) Put(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (d *DefaultHandler) Delete() int {
+	return http.StatusMethodNotAllowed
 }
 
-func (s *DefaultHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (d *DefaultHandler) Patch() int {
+	return http.StatusMethodNotAllowed
 }
 
-func (s *DefaultHandler) Patch(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (d *DefaultHandler) Head() int {
+	return http.StatusMethodNotAllowed
 }
 
-func (s *DefaultHandler) Head(w http.ResponseWriter, r *http.Request) {
-	s.defaultHandler(w, r)
+func (d *DefaultHandler) ResponseWriter() http.ResponseWriter {
+	return d.response
+}
+
+func (d *DefaultHandler) Req() *http.Request {
+	return d.request
+}
+
+func (d *DefaultHandler) URIVars() URIVars {
+	return d.uriVars
+}
+
+func (d *DefaultHandler) setRequestInfo(w http.ResponseWriter, r *http.Request, u URIVars) {
+	*d = DefaultHandler{response: w, request: r, uriVars: u}
 }

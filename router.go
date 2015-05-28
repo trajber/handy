@@ -14,7 +14,7 @@ var (
 
 type node struct {
 	name             string
-	handler          HandyFunc
+	handler          Constructor
 	isWildcard       bool
 	hasChildWildcard bool
 	parent           *node
@@ -57,7 +57,7 @@ func (r *Router) nodeExists(n string) (*node, bool) {
 	return v, ok
 }
 
-func (r *Router) AppendRoute(uri string, h HandyFunc) error {
+func (r *Router) AppendRoute(uri string, h Constructor) error {
 	uri = strings.TrimSpace(uri)
 
 	// Make sure we are not appending the root ("/"), otherwise remove final slash
@@ -138,15 +138,17 @@ func (n *node) findChild(name string) *node {
 	return v
 }
 
+type URIVars map[string]string
+
 type RouteMatch struct {
-	URIVars map[string]string
-	Handler HandyFunc
+	URIVars URIVars
+	Handler Constructor
 }
 
 // This method rebuilds a route based on a given URI
 func (r *Router) Match(uri string) (*RouteMatch, error) {
 	rt := new(RouteMatch)
-	rt.URIVars = make(map[string]string)
+	rt.URIVars = make(URIVars)
 
 	current := r.current
 	uri = strings.TrimSpace(uri)

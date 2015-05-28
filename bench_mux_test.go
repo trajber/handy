@@ -12,7 +12,9 @@ type TestHandler struct {
 
 func BenchmarkSimpleRequest(b *testing.B) {
 	mux := NewHandy()
-	mux.Handle("/foo", func() Handler { return new(TestHandler) })
+	mux.Handle("/foo", func() Handler {
+		return new(TestHandler)
+	})
 
 	req, err := http.NewRequest("GET", "/foo", nil)
 	if err != nil {
@@ -29,7 +31,9 @@ func BenchmarkSimpleRequest(b *testing.B) {
 
 func BenchmarkPathWithVariable(b *testing.B) {
 	mux := NewHandy()
-	mux.Handle("/foo/{name}", func() Handler { return new(TestHandler) })
+	mux.Handle("/foo/{name}", func() Handler {
+		return new(TestHandler)
+	})
 
 	req, err := http.NewRequest("GET", "/foo/bar", nil)
 	if err != nil {
@@ -46,7 +50,9 @@ func BenchmarkPathWithVariable(b *testing.B) {
 
 func BenchmarkPathWithVariables(b *testing.B) {
 	mux := NewHandy()
-	mux.Handle("/foo/{name}/{age}/{nono}", func() Handler { return new(TestHandler) })
+	mux.Handle("/foo/{name}/{age}/{nono}", func() Handler {
+		return new(TestHandler)
+	})
 
 	req, err := http.NewRequest("GET", "/foo/bar/100/x", nil)
 	if err != nil {

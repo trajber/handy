@@ -1,8 +1,6 @@
 package handy
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestAppendRoute(t *testing.T) {
 	rt := NewRouter()

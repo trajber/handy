@@ -1,13 +1,13 @@
 package handy
 
-import (
-	"testing"
-)
+import "testing"
 
 func BenchmarkFindRoute(b *testing.B) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test/{x}", func() Handler { return h })
+	err := rt.AppendRoute("/test/{x}", func() Handler {
+		return h
+	})
 
 	if err != nil {
 		b.Fatal("Cannot append a valid route", err)

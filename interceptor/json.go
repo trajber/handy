@@ -2,80 +2,80 @@ package interceptor
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
-	"reflect"
 	"strings"
 )
 
+type jsonHandler interface {
+	Field(string, string) interface{}
+	Req() *http.Request
+	ResponseWriter() http.ResponseWriter
+}
+
 type JSONCodec struct {
-	structure interface{}
-	err       reflect.Value
-	request   reflect.Value
-	response  reflect.Value
+	handler jsonHandler
 }
 
-func NewJSONCodec(st interface{}) *JSONCodec {
-	return &JSONCodec{structure: st}
+func NewJSONCodec(h jsonHandler) *JSONCodec {
+	return &JSONCodec{handler: h}
 }
 
-func (c *JSONCodec) Before(w http.ResponseWriter, r *http.Request) {
-	m := strings.ToLower(r.Method)
-	c.parse(m)
+func (j *JSONCodec) Before() int {
+	m := strings.ToLower(j.handler.Req().Method)
+	requestField := j.handler.Field("request", m)
 
-	if c.request.IsValid() {
-		decoder := json.NewDecoder(r.Body)
-		for {
-			if err := decoder.Decode(c.request.Addr().Interface()); err != nil {
+	if requestField == nil {
+		return 0
+	}
+
+	decoder := json.NewDecoder(j.handler.Req().Body)
+
+	for {
+		if err := decoder.Decode(requestField); err != nil {
+			if err == io.EOF {
 				break
 			}
+
+			return http.StatusInternalServerError
 		}
 	}
+
+	return 0
 }
 
-func (c *JSONCodec) After(w http.ResponseWriter, r *http.Request) {
-	if c.err.IsValid() {
-		if elem := c.err.Interface(); elem != nil {
-			elemType := reflect.TypeOf(elem)
-			if elemType.Kind() == reflect.Ptr && !c.err.IsNil() {
-				w.Header().Set("Content-Type", "application/json")
-				encoder := json.NewEncoder(w)
-				encoder.Encode(elem)
-				return
-			}
+func (j *JSONCodec) After(status int) int {
+	headerField := j.handler.Field("response", "header")
+	var header http.Header
+
+	if headerField != nil {
+		header = headerField.(http.Header)
+	}
+
+	for k, values := range header {
+		for _, value := range values {
+			j.handler.ResponseWriter().Header().Add(k, value)
 		}
 	}
 
-	if c.response.IsValid() {
-		elem := c.response.Interface()
-		elemType := reflect.TypeOf(elem)
-		if elemType.Kind() == reflect.Ptr && c.response.IsNil() {
-			return
-		}
+	var response interface{}
+	method := strings.ToLower(j.handler.Req().Method)
 
-		w.Header().Set("Content-Type", "application/json")
-		encoder := json.NewEncoder(w)
-		encoder.Encode(elem)
+	if responseAll := j.handler.Field("response", "all"); responseAll != nil {
+		response = responseAll
+
+	} else if responseForMethod := j.handler.Field("response", method); responseForMethod != nil {
+		response = responseForMethod
 	}
-}
 
-func (c *JSONCodec) parse(m string) {
-	st := reflect.ValueOf(c.structure).Elem()
-
-	for i := 0; i < st.NumField(); i++ {
-		field := st.Type().Field(i)
-		value := st.Field(i)
-
-		tag := field.Tag.Get("request")
-		if tag == "all" || strings.Contains(tag, m) {
-			c.request = value
-			continue
-		}
-
-		tag = field.Tag.Get("response")
-		if tag == "all" || strings.Contains(tag, m) {
-			c.response = value
-		} else if tag == "error" {
-			c.err = value
-		}
+	if response == nil {
+		j.handler.ResponseWriter().WriteHeader(status)
+		return status
 	}
+
+	j.handler.ResponseWriter().Header().Set("Content-Type", "application/json")
+	j.handler.ResponseWriter().WriteHeader(status)
+	json.NewEncoder(j.handler.ResponseWriter()).Encode(response)
+
+	return status
 }

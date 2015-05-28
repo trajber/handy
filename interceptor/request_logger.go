@@ -8,22 +8,26 @@ import (
 	"net/http"
 )
 
-type requestLogger struct {
-	logger *log.Logger
+type RequestLogger struct {
 	NoAfterInterceptor
+
+	logger  *log.Logger
+	request *http.Request
 }
 
-func NewRequestLogger(lg *log.Logger) *requestLogger {
-	return &requestLogger{logger: lg}
+func NewRequestLogger(lg *log.Logger, r *http.Request) *RequestLogger {
+	return &RequestLogger{logger: lg}
 }
 
-func (l *requestLogger) Before(w http.ResponseWriter, r *http.Request) {
-	if r.Body == nil || l.logger == nil {
-		return
+func (l *RequestLogger) Before() int {
+	if l.request.Body == nil || l.logger == nil {
+		return 0
 	}
 
 	buf := bytes.NewBuffer(nil)
-	io.Copy(buf, r.Body)
-	r.Body.Close()
-	r.Body = ioutil.NopCloser(buf)
+	io.Copy(buf, l.request.Body)
+	l.request.Body.Close()
+	l.request.Body = ioutil.NopCloser(buf)
+
+	return 0
 }

@@ -24,73 +24,44 @@ import (
 
 func main() {
 	srv := handy.NewHandy()
-	srv.Handle("/hello/", func() handy.Handler { return new(MyHandler) })
-	log.Fatal(http.ListenAndServe(":8080", srv))
-}
-
-type MyHandler struct {
-	handy.DefaultHandler
-}
-
-func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello World"))
-}
-~~~
-
-# Path with variables
-Path variables must be enclosed by braces.
-
-~~~ go
-srv.Handle("/hello/{name}", func() handy.Handler { 
-	return new(MyHandler) 
-})
-~~~
-
-And you can read them using the Handler's fields. You just need to tag the field.
-
-~~~ go
-type MyHandler struct {
-	handy.DefaultHandler
-	Name string `param:"name"`
-}
-
-func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello " + h.Name))
-}
-~~~
-
-### URI variables - a complete example:
-~~~ go
-package main
-
-import (
-	"github.com/trajber/handy"
-	"log"
-	"net/http"
-)
-
-func main() {
-	srv := handy.NewHandy()
-	srv.Handle("/hello/{name}", func() handy.Handler {
-		return new(MyHandler)
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
 	})
 	log.Fatal(http.ListenAndServe(":8080", srv))
 }
 
 type MyHandler struct {
 	handy.DefaultHandler
-	Name string `param:"name"`
 }
 
-func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello " + h.Name))
+func (h *MyHandler) Get() int {
+	h.ResponseWriter().Write([]byte("Hello World"))
+	return http.StatusOK
 }
 ~~~
 
 # Interceptors
-To execute functions before and/or after the verb method being called you can use interceptors. To do so you need to create a InterceptorChain in you Handler to be executed Before or After the HTTP verb method.
+The true power of this framework comes from the use of interceptors. They are special units that are called before and after every handler method call. With interceptors, one can automate most of the repetitive tasks involving a request handling, like the setup and commit of a database transaction, JSON serialisation and automatic decode of URI parameters.
 
-## Interceptors - a complete example
+If the handler register the interceptor chain `[a, b, c]`, the framework will call, in order:
+~~~
+a.Before
+b.Before
+c.Before
+handler.Method (any of Get, Put, Post, Delete or Patch)
+c.After
+b.After
+a.After
+~~~
+If any of the interceptors' Before returns a code different than zero, the chain is interrupted. Say, for example, that the Before method of the b interceptor returns http.StatusInternalServerError; then, the execution will be:
+~~~
+a.Before
+b.Before
+b.After
+a.After
+~~~
+
+## Interceptors - simple example
 ~~~ go
 package main
 
@@ -103,8 +74,8 @@ import (
 
 func main() {
 	srv := handy.NewHandy()
-	srv.Handle("/hello/", func() handy.Handler {
-		return new(MyHandler)
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
 	})
 	log.Fatal(http.ListenAndServe(":8080", srv))
 }
@@ -113,8 +84,9 @@ type MyHandler struct {
 	handy.DefaultHandler
 }
 
-func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Success"))
+func (h *MyHandler) Get() int {
+	h.ResponseWriter().Write([]byte("Hello World"))
+	return http.StatusOK
 }
 
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
@@ -125,12 +97,14 @@ type TimerInterceptor struct {
 	Timer time.Time
 }
 
-func (i *TimerInterceptor) Before(w http.ResponseWriter, r *http.Request) {
+func (i *TimerInterceptor) Before() int {
 	i.Timer = time.Now()
+	return 0
 }
 
-func (i *TimerInterceptor) After(w http.ResponseWriter, r *http.Request) {
+func (i *TimerInterceptor) After(status int) int {
 	log.Println("Took", time.Since(i.Timer))
+	return status
 }
 ~~~
 
@@ -144,7 +118,9 @@ type MyResponse struct {
 
 type MyHandler struct {
 	handy.DefaultHandler
-	// this structure will be used only for get and put methods
+	interceptor.IntrospectorCompliant
+
+	// this structure will be used only for GET and PUT methods
 	Response MyResponse `response:"get,put"` 
 }
 ~~~
@@ -152,8 +128,9 @@ type MyHandler struct {
 Now, you just need to include JSONCodec in the handler's interceptor chain:
 ~~~ go
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	codec := inteceptor.NewJSONCodec(h)
-	return handy.NewInterceptorChain().Chain(codec)
+	return handy.NewInterceptorChain()
+		.Chain(inteceptor.NewIntrospector(h))
+		.Chain(inteceptor.NewJSONCodec(h))
 }
 ~~~
 
@@ -162,32 +139,36 @@ func (h *MyHandler) Interceptors() handy.InterceptorChain {
 package main
 
 import (
-		"github.com/trajber/handy"
-		"github.com/trajber/handy/interceptor"
+	"github.com/trajber/handy"
+	"github.com/trajber/handy/interceptor"
     "log"
     "net/http"
 )
 
 func main() {
     srv := handy.NewHandy()
-    srv.Handle("/hello/", func() handy.Handler {
-        return new(MyHandler)
-    })
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
+	})
     log.Fatal(http.ListenAndServe(":8080", srv))
 }
 
 type MyHandler struct {
     handy.DefaultHandler
+	interceptor.IntrospectorCompliant
+
     Response MyResponse `response:"all"`
 }
 
-func (h *MyHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *MyHandler) Get() int {
     h.Response.Message = "hello world"
+	return http.StatusOK
 }
 
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	codec := interceptor.NewJSONCodec(h)
-	return handy.NewInterceptorChain().Chain(codec)
+	return handy.NewInterceptorChain()
+		.Chain(inteceptor.NewIntrospector(h))
+		.Chain(inteceptor.NewJSONCodec(h))
 }
 
 type MyResponse struct {
@@ -209,25 +190,29 @@ import (
 
 func main() {
 	srv := handy.NewHandy()
-	srv.Handle("/hello/", func() handy.Handler {
-		return new(MyHandler)
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
 	})
 	log.Fatal(http.ListenAndServe(":8181", srv))
 }
 
 type MyHandler struct {
 	handy.DefaultHandler
+	interceptor.IntrospectorCompliant
+
 	Response MyResponse `response:"post"`
 	Request  MyRequest  `request:"post"`
 }
 
-func (h *MyHandler) Post(w http.ResponseWriter, r *http.Request) {
+func (h *MyHandler) Post() int {
 	h.Response.Answer = "You asked me about " + h.Request.Question
+	return http.StatusOK
 }
 
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	codec := interceptor.NewJSONCodec(h)
-	return handy.NewInterceptorChain().Chain(codec)
+	return handy.NewInterceptorChain()
+		.Chain(inteceptor.NewIntrospector(h))
+		.Chain(inteceptor.NewJSONCodec(h))
 }
 
 type MyResponse struct {
@@ -251,6 +236,73 @@ You will get:
 }
 ~~~
 
+## URIVar interceptor
+Handy can automatically set the URI parameters in the handler using the included URIVar interceptor. It has support for Go native types plus any type that implements the TextUnmarshaler interface:
+
+~~~go
+package main
+
+import (
+	"log"
+	"net"
+	"net/http"
+
+	"github.com/trajber/handy"
+	"github.com/trajber/handy/interceptor"
+)
+
+func main() {
+srv := handy.NewHandy()
+	srv.Handle("/user/{user}/machine/{ip}", func() handy.Handler {
+		return &MyHandler{}
+	})
+	log.Fatal(http.ListenAndServe(":8181", srv))
+}
+
+type MyHandler struct {
+	handy.DefaultHandler
+	interceptor.IntrospectorCompliant
+
+	User     string     `urivar:"user"`
+	IP       net.IP     `urivar:"ip"`
+	Response MyResponse `response:"get"`
+}
+
+func (h *MyHandler) Get() int {
+	h.Response.Message = "Request from user " + h.User + " at " + h.IP.String()
+	return http.StatusOK
+}
+
+func (h *MyHandler) Interceptors() handy.InterceptorChain {
+	return handy.NewInterceptorChain()
+		.Chain(inteceptor.NewIntrospector(h))
+		.Chain(inteceptor.NewJSONCodec(h))
+		.Chain(inteceptor.NewURIVars(h))
+}
+
+type MyResponse struct {
+	Message string `json:"message"`
+}
+~~~
+
+Thanks to the fact that the URIVar interceptor supports TextUnmarshalers, one can use it to automatically validate a URI variable before it reaches the handler:
+~~~go
+type limitedString string
+
+func (l *limitedString) UnmarshalText(data []byte) error {
+	text := string(data)
+	length := len(text)
+
+	if length < 5 || length > 50 {
+		return errors.New("Wrong size for parameter")
+	}
+
+	*l = text
+	return nil
+}
+~~~
+
+You can do the same with the QueryString interceptor, also included in the handy/interceptor package.
 
 #Logging
 Bad things happens even inside Handy; You can set your own function to handle Handy errors.
@@ -259,9 +311,9 @@ Bad things happens even inside Handy; You can set your own function to handle Ha
 package main
 
 import (
-		"github.com/trajber/handy"
-		"log"
-		"net/http"
+	"github.com/trajber/handy"
+	"log"
+	"net/http"
 )
 
 func main() {
@@ -272,51 +324,10 @@ func main() {
     	// here you can handle the error
     	log.Println(e)
   	}
-    srv.Handle("/hello/", func() handy.Handler {
-        return new(MyHandler)
-    })
+	srv.Handle("/hello", func() handy.Handler {
+		return &MyHandler{}
+	})
 
     log.Fatal(http.ListenAndServe(":8080", srv))
 }
 ~~~
-
-# Tests
-You can use [Go's httptest package] (http://golang.org/pkg/net/http/httptest/)
-
-~~~ go
-package handler
-
-import (
-	"github.com/trajber/handy"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-)
-
-func TestHandler(t *testing.T) {
-	mux := handy.NewHandy()
-	h := new(HelloHandler)
-	mux.Handle("/{name}/{id}", func() handy.Handler {
-		return h
-	})
-
-	req, err := http.NewRequest("GET", "/foo/10", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-
-	if h.Id != 10 {
-		t.Errorf("Unexpected Id value %d", h.Id)
-	}
-
-	if h.Name != "foo" {
-		t.Errorf("Unexpected Name value %s", h.Name)
-	}
-
-	t.Logf("%d - %s - %d", w.Code, w.Body.String(), h.Id)
-}
-~~~
-
