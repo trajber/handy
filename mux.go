@@ -64,7 +64,7 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// The server has not found anything matching the Request-URI. No
 		// indication is given of whether the condition is temporary or
 		// permanent.
-		http.NotFound(w, r)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
