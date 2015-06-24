@@ -96,7 +96,6 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "HEAD":
 		status = h.Head()
 	default:
-		http.Error(w, "", http.StatusMethodNotAllowed)
 		status = http.StatusMethodNotAllowed
 	}
 
