@@ -71,6 +71,28 @@ func TestAppendInvalidWildCard(t *testing.T) {
 	}
 }
 
+func TestDontFindRoute(t *testing.T) {
+	rt := NewRouter()
+	h := new(DefaultHandler)
+
+	err := rt.AppendRoute("/test", func() Handler { return h })
+	if err != nil {
+		t.Fatal("Cannot append a valid route", err)
+	}
+
+	route, err := rt.Match("/test2")
+	if err == nil {
+		t.Fatal("Got a match for an invalid route")
+	}
+
+	route, err = rt.Match("/test/test2")
+	if err == nil {
+		t.Fatal("Got a match for an invalid route")
+	}
+
+	t.Log(route.URIVars)
+}
+
 func TestFindRoute(t *testing.T) {
 	rt := NewRouter()
 	h := new(DefaultHandler)
@@ -81,6 +103,40 @@ func TestFindRoute(t *testing.T) {
 	}
 
 	route, err := rt.Match("/test")
+	if err != nil {
+		t.Fatal("Cannot find a valid route;", err)
+	}
+
+	t.Log(route.URIVars)
+}
+
+func TestFindRouteWithEmptyParameter(t *testing.T) {
+	rt := NewRouter()
+	h := new(DefaultHandler)
+
+	err := rt.AppendRoute("/test/{param}", func() Handler { return h })
+	if err != nil {
+		t.Fatal("Cannot append a valid route", err)
+	}
+
+	route, err := rt.Match("/test/")
+	if err != nil {
+		t.Fatal("Cannot find a valid route;", err)
+	}
+
+	t.Log(route.URIVars)
+}
+
+func TestFindRouteFallback(t *testing.T) {
+	rt := NewRouter()
+	h := new(DefaultHandler)
+
+	err := rt.AppendRoute("/test/{param}", func() Handler { return h })
+	if err != nil {
+		t.Fatal("Cannot append a valid route", err)
+	}
+
+	route, err := rt.Match("/test/value/another-test")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
 	}

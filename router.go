@@ -152,14 +152,25 @@ func (r *Router) Match(uri string) (*RouteMatch, error) {
 
 	current := r.current
 	uri = strings.TrimSpace(uri)
-	for _, v := range strings.Split(uri, "/") {
-		if v == "" {
+	parts := strings.Split(uri, "/")
+
+	for i, v := range parts {
+		// ignore first empty value (before initial slash)
+		if i == 0 && v == "" {
 			continue
 		}
 
 		n := current.findChild(v)
 		if n == nil {
-			return rt, ErrRouteNotFound
+			if !current.isWildcard {
+				return rt, ErrRouteNotFound
+			}
+
+			// when we cannot find the specific route, fallback to the last handler
+			// that we found. The URI parts that did not match will be concataned to
+			// the URI variable when the last handler is a wildcard
+			rt.URIVars[cleanWildcard(current.name)] += "/" + strings.Join(parts[i:], "/")
+			break
 		}
 
 		if n.isWildcard {
