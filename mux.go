@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	ErrorFunc = func(e error) {}
+	ErrorFunc   = func(error) {}
+	NoMatchFunc = func(http.ResponseWriter, *http.Request) {}
 )
 
 type Handy struct {
@@ -60,11 +61,15 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	route, err := handy.router.Match(r.URL.Path)
 
 	if err != nil {
-		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
-		// The server has not found anything matching the Request-URI. No
-		// indication is given of whether the condition is temporary or
-		// permanent.
-		w.WriteHeader(http.StatusNotFound)
+		if NoMatchFunc != nil {
+			NoMatchFunc(w, r)
+		} else {
+			// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
+			// The server has not found anything matching the Request-URI. No
+			// indication is given of whether the condition is temporary or
+			// permanent.
+			w.WriteHeader(http.StatusNotFound)
+		}
 		return
 	}
 
