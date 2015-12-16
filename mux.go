@@ -140,7 +140,7 @@ write:
 		if ProfilingEnabled {
 			elapsed = time.Since(timeBefore).Seconds()
 			v := reflect.ValueOf(interceptors[k])
-			msg := fmt.Sprintf("Interceptor After%s - %.4f", v.Elem().Type().Name(), elapsed)
+			msg := fmt.Sprintf("Interceptor After %s - %.4f", v.Elem().Type().Name(), elapsed)
 			ProfileFunc(msg)
 		}
 
