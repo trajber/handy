@@ -1,8 +1,11 @@
 package interceptor
 
 import (
-	"br/tests"
+	"strings"
 	"testing"
+
+	"github.com/aryann/difflib"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestIntrospectorBefore(t *testing.T) {
@@ -106,13 +109,13 @@ func TestIntrospectorBeforeUnknownField(t *testing.T) {
 	object.SetField("missing", "field", 17)
 
 	if copied.F != object.F {
-		t.Errorf("Both objects are expected to be equal:\n%s", tests.Diff(copied, object))
+		t.Errorf("Both objects are expected to be equal:\n%s", diff(copied, object))
 	}
 
 	object.SetField("field", "g", 17)
 
 	if copied.F != object.F {
-		t.Errorf("Both objects are expected to be equal:\n%s", tests.Diff(copied, object))
+		t.Errorf("Both objects are expected to be equal:\n%s", diff(copied, object))
 	}
 
 	f := object.Field("missing", "field")
@@ -120,4 +123,8 @@ func TestIntrospectorBeforeUnknownField(t *testing.T) {
 	if f != nil {
 		t.Errorf("The value %#v is supposed to be nil", f)
 	}
+}
+
+func diff(a, b interface{}) []difflib.DiffRecord {
+	return difflib.Diff(strings.SplitAfter(spew.Sdump(a), "\n"), strings.SplitAfter(spew.Sdump(b), "\n"))
 }
