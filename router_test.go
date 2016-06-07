@@ -85,6 +85,10 @@ func TestFindRoute(t *testing.T) {
 		t.Fatal("Cannot find a valid route;", err)
 	}
 
+	if route.URI != "/test" {
+		t.Fatalf("Unexpected URI %s", route.URI)
+	}
+
 	t.Log(route.URIVars)
 }
 
@@ -100,6 +104,10 @@ func TestMatchWithWildcard(t *testing.T) {
 	route, err := rt.Match("/test/foo")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
+	}
+
+	if route.URI != "/test/{x}" {
+		t.Fatalf("Unexpected URI %s", route.URI)
 	}
 
 	t.Log(route.URIVars)
@@ -133,6 +141,10 @@ func TestMultipleWildCards(t *testing.T) {
 	route, err := rt.Match("/test/foo/bar")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
+	}
+
+	if route.URI != "/test/{x}/{y}" {
+		t.Fatalf("Unexpected URI %s", route.URI)
 	}
 
 	t.Log(route.URIVars)

@@ -20,6 +20,7 @@ type node struct {
 	parent           *node
 	children         map[string]*node
 	wildcardName     string
+	uri              string
 }
 
 type Router struct {
@@ -87,6 +88,7 @@ func (r *Router) AppendRoute(uri string, h Constructor) error {
 
 			} else if i == len(tokens)-1 {
 				n.handler = h
+				n.uri = uri
 				return nil
 			}
 
@@ -118,6 +120,7 @@ func (r *Router) AppendRoute(uri string, h Constructor) error {
 
 	if r.current != r.root {
 		r.current.handler = h
+		r.current.uri = uri
 	}
 
 	if appended == false {
@@ -141,6 +144,7 @@ func (n *node) findChild(name string) *node {
 type URIVars map[string]string
 
 type RouteMatch struct {
+	URI     string // registered URI pattern for this route
 	URIVars URIVars
 	Handler Constructor
 }
@@ -173,6 +177,7 @@ func (r *Router) Match(uri string) (*RouteMatch, error) {
 		return rt, ErrRouteNotFound
 	}
 
+	rt.URI = current.uri
 	rt.Handler = current.handler
 	return rt, nil
 }
