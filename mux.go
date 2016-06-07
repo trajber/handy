@@ -26,8 +26,8 @@ type Handy struct {
 
 type Constructor func() Handler
 
-func SetHandlerInfo(h Handler, w http.ResponseWriter, r *http.Request, u URIVars) {
-	h.setRequestInfo(w, r, u)
+func SetHandlerInfo(h Handler, w http.ResponseWriter, r *http.Request, uri string, u URIVars) {
+	h.setRequestInfo(w, r, uri, u)
 }
 
 func NewHandy() *Handy {
@@ -79,7 +79,7 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h := route.Handler()
-	SetHandlerInfo(h, w, r, route.URIVars)
+	SetHandlerInfo(h, w, r, route.URI, route.URIVars)
 	interceptors := h.Interceptors()
 	var status int
 

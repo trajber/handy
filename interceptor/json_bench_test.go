@@ -1,7 +1,6 @@
 package interceptor
 
 import (
-	"br/tests"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -83,7 +82,7 @@ func TestJSONBefore(t *testing.T) {
 
 	if !reflect.DeepEqual(expected, handler.Request) {
 		t.Error("Wrong request")
-		t.Log(tests.Diff(expected, handler.Request))
+		t.Log(diff(expected, handler.Request))
 	}
 }
 
