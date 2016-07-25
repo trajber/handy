@@ -121,3 +121,24 @@ func TestIntrospectorBeforeUnknownField(t *testing.T) {
 		t.Errorf("The value %#v is supposed to be nil", f)
 	}
 }
+
+func TestIntrospectorBeforeEmbedded(t *testing.T) {
+	object := struct {
+		IntrospectorCompliant
+		dummy
+	}{}
+
+	i := NewIntrospector(&object)
+	i.Before()
+
+	if _, ok := object.Field("field", "f").(*int); !ok {
+		t.Error("It didn't identify the object")
+
+	} else if values := object.KeysWithTag("field"); len(values) != 1 {
+		t.Errorf("Wrong number of values for tag “field”: “%d”", len(values))
+	}
+}
+
+type dummy struct {
+	F int `field:"f"`
+}

@@ -26,11 +26,23 @@ func NewIntrospector(st setFielder) *Introspector {
 
 func (i *Introspector) Before() int {
 	st := reflect.ValueOf(i.structure).Elem()
-	typ := st.Type()
 	fields := make(StructFields)
 
-	for i := 0; i < st.NumField(); i++ {
-		field := typ.Field(i)
+	i.parse(st, fields)
+	i.structure.SetFields(fields)
+	return 0
+}
+
+func (i *Introspector) parse(st reflect.Value, fields StructFields) {
+	typ := st.Type()
+
+	for j := 0; j < st.NumField(); j++ {
+		field := typ.Field(j)
+
+		if field.Type.Kind() == reflect.Struct && field.Anonymous {
+			i.parse(st.Field(j), fields)
+			continue
+		}
 
 		if field.Tag == "" {
 			continue
@@ -47,14 +59,11 @@ func (i *Introspector) Before() int {
 						fields[name] = make(map[string]reflect.Value)
 					}
 
-					fields[name][value] = st.Field(i)
+					fields[name][value] = st.Field(j)
 				}
 			}
 		}
 	}
-
-	i.structure.SetFields(fields)
-	return 0
 }
 
 func emptyInterface(v reflect.Value) interface{} {
