@@ -46,15 +46,14 @@ func (j *JSONCodec) Before() int {
 
 func (j *JSONCodec) After(status int) int {
 	headerField := j.handler.Field("response", "header")
-	var header http.Header
 
 	if headerField != nil {
-		header = headerField.(http.Header)
-	}
-
-	for k, values := range header {
-		for _, value := range values {
-			j.handler.ResponseWriter().Header().Add(k, value)
+		if header, ok := headerField.(*http.Header); ok {
+			for k, values := range *header {
+				for _, value := range values {
+					j.handler.ResponseWriter().Header().Add(k, value)
+				}
+			}
 		}
 	}
 
