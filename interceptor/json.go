@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -67,14 +68,17 @@ func (j *JSONCodec) After(status int) int {
 		response = responseForMethod
 	}
 
-	if response == nil {
+	var buf []byte
+	buf, err := json.Marshal(response)
+	if err != nil || response == nil {
 		j.handler.ResponseWriter().WriteHeader(status)
 		return status
 	}
 
 	j.handler.ResponseWriter().Header().Set("Content-Type", "application/json")
+	j.handler.ResponseWriter().Header().Set("Content-Length", strconv.Itoa(len(buf)))
 	j.handler.ResponseWriter().WriteHeader(status)
-	json.NewEncoder(j.handler.ResponseWriter()).Encode(response)
+	j.handler.ResponseWriter().Write(buf)
 
 	return status
 }
