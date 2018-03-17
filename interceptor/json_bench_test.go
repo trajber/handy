@@ -118,7 +118,7 @@ func TestJSONAfter(t *testing.T) {
 		t.Errorf("Wrong status code. Expecting “200”; found “%d”", status)
 	}
 
-	expected := `{"Cinco":5,"Seis":"seis","Sete":[true,true,false]}` + "\n"
+	expected := `{"Cinco":5,"Seis":"seis","Sete":[true,true,false]}`
 
 	if w.Body.String() != expected {
 		t.Errorf("Wrong response. Expecting “%s”; found “%s”", expected, w.Body.String())

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -46,15 +47,14 @@ func (j *JSONCodec) Before() int {
 
 func (j *JSONCodec) After(status int) int {
 	headerField := j.handler.Field("response", "header")
-	var header http.Header
 
 	if headerField != nil {
-		header = headerField.(http.Header)
-	}
-
-	for k, values := range header {
-		for _, value := range values {
-			j.handler.ResponseWriter().Header().Add(k, value)
+		if header, ok := headerField.(*http.Header); ok {
+			for k, values := range *header {
+				for _, value := range values {
+					j.handler.ResponseWriter().Header().Add(k, value)
+				}
+			}
 		}
 	}
 
@@ -68,14 +68,17 @@ func (j *JSONCodec) After(status int) int {
 		response = responseForMethod
 	}
 
-	if response == nil {
+	var buf []byte
+	buf, err := json.Marshal(response)
+	if err != nil || response == nil {
 		j.handler.ResponseWriter().WriteHeader(status)
 		return status
 	}
 
 	j.handler.ResponseWriter().Header().Set("Content-Type", "application/json")
+	j.handler.ResponseWriter().Header().Set("Content-Length", strconv.Itoa(len(buf)))
 	j.handler.ResponseWriter().WriteHeader(status)
-	json.NewEncoder(j.handler.ResponseWriter()).Encode(response)
+	j.handler.ResponseWriter().Write(buf)
 
 	return status
 }
