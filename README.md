@@ -121,20 +121,20 @@ type MyHandler struct {
 	interceptor.IntrospectorCompliant
 
 	// this structure will be used only for GET and PUT methods
-	Response MyResponse `response:"get,put"` 
+	Response MyResponse `response:"get,put"`
 }
 ~~~
 
 Now, you just need to include JSONCodec in the handler's interceptor chain:
 ~~~ go
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	return handy.NewInterceptorChain()
-		.Chain(inteceptor.NewIntrospector(h))
-		.Chain(inteceptor.NewJSONCodec(h))
+	return handy.NewInterceptorChain().
+		Chain(interceptor.NewIntrospector(h)).
+		Chain(interceptor.NewJSONCodec(h))
 }
 ~~~
 
-### JSON Codec inteceptor - a complete example:
+### JSON Codec interceptor - a complete example:
 ~~~ go
 package main
 
@@ -166,9 +166,9 @@ func (h *MyHandler) Get() int {
 }
 
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	return handy.NewInterceptorChain()
-		.Chain(inteceptor.NewIntrospector(h))
-		.Chain(inteceptor.NewJSONCodec(h))
+	return handy.NewInterceptorChain().
+		Chain(interceptor.NewIntrospector(h)).
+		Chain(interceptor.NewJSONCodec(h))
 }
 
 type MyResponse struct {
@@ -176,7 +176,7 @@ type MyResponse struct {
 }
 ~~~
 
-### JSON Codec inteceptor - An example with JSON in request and response:
+### JSON Codec interceptor - An example with JSON in request and response:
 ~~~go
 package main
 
@@ -210,9 +210,9 @@ func (h *MyHandler) Post() int {
 }
 
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	return handy.NewInterceptorChain()
-		.Chain(inteceptor.NewIntrospector(h))
-		.Chain(inteceptor.NewJSONCodec(h))
+	return handy.NewInterceptorChain().
+		Chain(interceptor.NewIntrospector(h)).
+		Chain(interceptor.NewJSONCodec(h))
 }
 
 type MyResponse struct {
@@ -274,10 +274,10 @@ func (h *MyHandler) Get() int {
 }
 
 func (h *MyHandler) Interceptors() handy.InterceptorChain {
-	return handy.NewInterceptorChain()
-		.Chain(inteceptor.NewIntrospector(h))
-		.Chain(inteceptor.NewJSONCodec(h))
-		.Chain(inteceptor.NewURIVars(h))
+	return handy.NewInterceptorChain().
+		Chain(interceptor.NewIntrospector(h)).
+		Chain(interceptor.NewJSONCodec(h)).
+		Chain(interceptor.NewURIVars(h))
 }
 
 type MyResponse struct {
@@ -318,7 +318,7 @@ import (
 
 func main() {
     srv := handy.NewHandy()
-    // This function will be called when 
+    // This function will be called when
     // some error occurs inside Handy code.
     srv.ErrorFunc = func(e error) {
     	// here you can handle the error

@@ -1,13 +1,19 @@
 package handy
 
 import (
+	"fmt"
 	"net/http"
+	"reflect"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var (
-	ErrorFunc = func(e error) {}
+	ErrorFunc        = func(error) {}
+	NoMatchFunc      = func(http.ResponseWriter, *http.Request) {}
+	ProfilingEnabled = false
+	ProfileFunc      = func(string) {}
 )
 
 type Handy struct {
@@ -60,11 +66,15 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	route, err := handy.router.Match(r.URL.Path)
 
 	if err != nil {
-		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
-		// The server has not found anything matching the Request-URI. No
-		// indication is given of whether the condition is temporary or
-		// permanent.
-		http.NotFound(w, r)
+		if NoMatchFunc != nil {
+			NoMatchFunc(w, r)
+		} else {
+			// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
+			// The server has not found anything matching the Request-URI. No
+			// indication is given of whether the condition is temporary or
+			// permanent.
+			w.WriteHeader(http.StatusNotFound)
+		}
 		return
 	}
 
@@ -73,13 +83,28 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	interceptors := h.Interceptors()
 	var status int
 
+	var timeBefore time.Time
+	var elapsed float64
 	for k, interceptor := range interceptors {
+		if ProfilingEnabled {
+			timeBefore = time.Now()
+		}
 		status = interceptor.Before()
+		if ProfilingEnabled {
+			elapsed = time.Since(timeBefore).Seconds()
+			v := reflect.ValueOf(interceptor)
+			msg := fmt.Sprintf("Interceptor Before %s - %.4f", v.Elem().Type().Name(), elapsed)
+			ProfileFunc(msg)
+		}
 		// If the interceptor reported some status, interrupt the chain
 		if status != 0 {
 			interceptors = interceptors[:k+1]
 			goto write
 		}
+	}
+
+	if ProfilingEnabled {
+		timeBefore = time.Now()
 	}
 
 	switch r.Method {
@@ -96,14 +121,28 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "HEAD":
 		status = h.Head()
 	default:
-		http.Error(w, "", http.StatusMethodNotAllowed)
 		status = http.StatusMethodNotAllowed
+	}
+
+	if ProfilingEnabled {
+		elapsed = time.Since(timeBefore).Seconds()
+		msg := fmt.Sprintf("%s %s - %.4f", r.Method, r.RequestURI, elapsed)
+		ProfileFunc(msg)
 	}
 
 write:
 	// executing all After interceptors in reverse order
 	for k := len(interceptors) - 1; k >= 0; k-- {
+		if ProfilingEnabled {
+			timeBefore = time.Now()
+		}
 		s := interceptors[k].After(status)
+		if ProfilingEnabled {
+			elapsed = time.Since(timeBefore).Seconds()
+			v := reflect.ValueOf(interceptors[k])
+			msg := fmt.Sprintf("Interceptor After %s - %.4f", v.Elem().Type().Name(), elapsed)
+			ProfileFunc(msg)
+		}
 
 		if s != 0 {
 			status = s
