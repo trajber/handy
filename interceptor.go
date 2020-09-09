@@ -108,7 +108,7 @@ func buildChain(interceptor Interceptor) []Interceptor {
 	// Pre-allocate some space for performance reasons.
 	chain := make([]Interceptor, 0, 8)
 
-	for i := interceptor.previous(); i != nil; i = i.previous() {
+	for i := interceptor; i != nil; i = i.previous() {
 		chain = append(chain, i)
 	}
 
