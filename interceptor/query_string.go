@@ -1,34 +1,45 @@
 package interceptor
 
-import "net/http"
+import (
+	"handy"
+	"net/http"
+)
 
-type queryStringHandler interface {
-	KeysWithTag(string) []string
-	Field(string, string) interface{}
-	Req() *http.Request
+type QueryString interface {
+	Introspector
 }
 
-type QueryString struct {
-	NopInterceptor
-
-	handler queryStringHandler
+type QueryStringAPI interface {
+	IntrospectorAPI
 }
 
-func NewQueryString(h queryStringHandler) *QueryString {
-	return &QueryString{handler: h}
+type queryString struct {
+	handy.ProtoInterceptor
+	IntrospectorAPI
 }
 
-func (q *QueryString) Before() int {
-	if q.handler.Req().Form == nil {
-		q.handler.Req().ParseMultipartForm(32 << 20) // 32 MB
+func NewQueryString(previous Introspector) QueryString {
+	if previous == nil {
+		panic("QueryString's dependency can not be nil")
 	}
 
-	for key, values := range q.handler.Req().Form {
+	q := &queryString{IntrospectorAPI: previous}
+	q.SetPrevious(previous)
+
+	return q
+}
+
+func (q *queryString) Before() int {
+	if q.Request.Form == nil {
+		q.Request.ParseMultipartForm(32 << 20) // 32 MB
+	}
+
+	for key, values := range q.Request.Form {
 		if len(values) == 0 {
 			continue
 		}
 
-		if err := setValue(q.handler.Field("query", key), values[0]); err != nil {
+		if err := setValue(q.Field("query", key), values[0]); err != nil {
 			return http.StatusBadRequest
 		}
 	}

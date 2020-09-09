@@ -2,35 +2,46 @@ package interceptor
 
 import (
 	"encoding/json"
+	"handy"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-type jsonHandler interface {
-	Field(string, string) interface{}
-	Req() *http.Request
-	ResponseWriter() http.ResponseWriter
+type JSONCodec interface {
+	Introspector
 }
 
-type JSONCodec struct {
-	handler jsonHandler
+type JSONCodecAPI interface {
+	IntrospectorAPI
 }
 
-func NewJSONCodec(h jsonHandler) *JSONCodec {
-	return &JSONCodec{handler: h}
+type jsonCodec struct {
+	handy.ProtoInterceptor
+	IntrospectorAPI
 }
 
-func (j *JSONCodec) Before() int {
-	m := strings.ToLower(j.handler.Req().Method)
-	requestField := j.handler.Field("request", m)
+func NewJSONCodec(previous Introspector) JSONCodec {
+	if previous == nil {
+		panic("JSONCodec's dependency can not be nil")
+	}
+
+	j := &jsonCodec{IntrospectorAPI: previous}
+	j.SetPrevious(previous)
+
+	return j
+}
+
+func (j *jsonCodec) Before() int {
+	m := strings.ToLower(j.Request.Method)
+	requestField := j.Field("request", m)
 
 	if requestField == nil {
 		return 0
 	}
 
-	decoder := json.NewDecoder(j.handler.Req().Body)
+	decoder := json.NewDecoder(j.Request.Body)
 
 	for {
 		if err := decoder.Decode(requestField); err != nil {
@@ -45,40 +56,40 @@ func (j *JSONCodec) Before() int {
 	return 0
 }
 
-func (j *JSONCodec) After(status int) int {
-	headerField := j.handler.Field("response", "header")
+func (j *jsonCodec) After(status int) int {
+	headerField := j.Field("response", "header")
 
 	if headerField != nil {
 		if header, ok := headerField.(*http.Header); ok {
 			for k, values := range *header {
 				for _, value := range values {
-					j.handler.ResponseWriter().Header().Add(k, value)
+					j.ResponseWriter.Header().Add(k, value)
 				}
 			}
 		}
 	}
 
 	var response interface{}
-	method := strings.ToLower(j.handler.Req().Method)
+	method := strings.ToLower(j.Request.Method)
 
-	if responseAll := j.handler.Field("response", "all"); responseAll != nil {
+	if responseAll := j.Field("response", "all"); responseAll != nil {
 		response = responseAll
 
-	} else if responseForMethod := j.handler.Field("response", method); responseForMethod != nil {
+	} else if responseForMethod := j.Field("response", method); responseForMethod != nil {
 		response = responseForMethod
 	}
 
 	var buf []byte
 	buf, err := json.Marshal(response)
 	if err != nil || response == nil {
-		j.handler.ResponseWriter().WriteHeader(status)
+		j.ResponseWriter.WriteHeader(status)
 		return status
 	}
 
-	j.handler.ResponseWriter().Header().Set("Content-Type", "application/json")
-	j.handler.ResponseWriter().Header().Set("Content-Length", strconv.Itoa(len(buf)))
-	j.handler.ResponseWriter().WriteHeader(status)
-	j.handler.ResponseWriter().Write(buf)
+	j.ResponseWriter.Header().Set("Content-Type", "application/json")
+	j.ResponseWriter.Header().Set("Content-Length", strconv.Itoa(len(buf)))
+	j.ResponseWriter.WriteHeader(status)
+	j.ResponseWriter.Write(buf)
 
 	return status
 }

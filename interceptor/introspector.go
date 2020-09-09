@@ -1,6 +1,7 @@
 package interceptor
 
 import (
+	"handy"
 	"reflect"
 	"regexp"
 	"strings"
@@ -8,39 +9,86 @@ import (
 
 var tagFormat = regexp.MustCompile(`(\w+):"([^"]+)"`)
 
-type StructFields map[string]map[string]reflect.Value
-
-type setFielder interface {
-	SetFields(StructFields)
+type Introspector interface {
+	handy.Interceptor
+	IntrospectorAPI
 }
 
-type Introspector struct {
-	NopInterceptor
-
-	structure setFielder
+type IntrospectorAPI interface {
+	SetField(tag, value string, data interface{})
+	Field(tag, value string) interface{}
+	KeysWithTag(tag string) []string
 }
 
-func NewIntrospector(st setFielder) *Introspector {
-	return &Introspector{structure: st}
+type introspector struct {
+	handy.ProtoInterceptor
+
+	fields structFields
 }
 
-func (i *Introspector) Before() int {
-	st := reflect.ValueOf(i.structure).Elem()
-	fields := make(StructFields)
+func NewIntrospector(previous handy.Interceptor, structure interface{}) Introspector {
+	intro := &introspector{fields: make(structFields)}
+	intro.SetPrevious(previous)
+	st := reflect.ValueOf(structure).Elem()
+	parse(st, intro.fields)
 
-	i.parse(st, fields)
-	i.structure.SetFields(fields)
-	return 0
+	return intro
 }
 
-func (i *Introspector) parse(st reflect.Value, fields StructFields) {
+type structFields map[string]map[string]reflect.Value
+
+func (i *introspector) SetField(tag, value string, data interface{}) {
+	values, found := i.fields[tag]
+
+	if !found {
+		return
+	}
+
+	f, found := values[value]
+
+	if !found {
+		return
+	}
+
+	if f.CanSet() {
+		f.Set(reflect.ValueOf(data))
+	}
+}
+
+func (i *introspector) Field(tag, value string) interface{} {
+	values, found := i.fields[tag]
+
+	if !found {
+		return nil
+	}
+
+	f, found := values[value]
+
+	if !found {
+		return nil
+	}
+
+	return emptyInterface(f)
+}
+
+func (i *introspector) KeysWithTag(tag string) []string {
+	keys := make([]string, 0, len(i.fields[tag]))
+
+	for k := range i.fields[tag] {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+func parse(st reflect.Value, fields structFields) {
 	typ := st.Type()
 
 	for j := 0; j < st.NumField(); j++ {
 		field := typ.Field(j)
 
 		if field.Type.Kind() == reflect.Struct && field.Anonymous {
-			i.parse(st.Field(j), fields)
+			parse(st.Field(j), fields)
 			continue
 		}
 
@@ -80,56 +128,4 @@ func emptyInterface(v reflect.Value) interface{} {
 	}
 
 	return v.Addr().Interface()
-}
-
-type IntrospectorCompliant struct {
-	fields StructFields
-}
-
-func (i *IntrospectorCompliant) SetFields(fields StructFields) {
-	i.fields = fields
-}
-
-func (i *IntrospectorCompliant) SetField(tag, value string, data interface{}) {
-	values, found := i.fields[tag]
-
-	if !found {
-		return
-	}
-
-	f, found := values[value]
-
-	if !found {
-		return
-	}
-
-	if f.CanSet() {
-		f.Set(reflect.ValueOf(data))
-	}
-}
-
-func (i *IntrospectorCompliant) Field(tag, value string) interface{} {
-	values, found := i.fields[tag]
-
-	if !found {
-		return nil
-	}
-
-	f, found := values[value]
-
-	if !found {
-		return nil
-	}
-
-	return emptyInterface(f)
-}
-
-func (i *IntrospectorCompliant) KeysWithTag(tag string) []string {
-	keys := make([]string, 0, len(i.fields[tag]))
-
-	for k := range i.fields[tag] {
-		keys = append(keys, k)
-	}
-
-	return keys
 }

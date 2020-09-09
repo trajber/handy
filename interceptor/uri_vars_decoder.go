@@ -1,9 +1,8 @@
 package interceptor
 
 import (
+	"handy"
 	"net/http"
-
-	"github.com/trajber/handy"
 )
 
 type uriVarsHandler interface {
@@ -11,19 +10,33 @@ type uriVarsHandler interface {
 	Field(string, string) interface{}
 }
 
-type URIVars struct {
-	NoAfterInterceptor
-
-	handler uriVarsHandler
+type URIVars interface {
+	Introspector
 }
 
-func NewURIVars(h uriVarsHandler) *URIVars {
-	return &URIVars{handler: h}
+type URIVarsAPI interface {
+	IntrospectorAPI
 }
 
-func (u *URIVars) Before() int {
-	for k, value := range u.handler.URIVars() {
-		field := u.handler.Field("urivar", k)
+type uriVars struct {
+	handy.ProtoInterceptor
+	IntrospectorAPI
+}
+
+func NewURIVars(previous Introspector) URIVars {
+	if previous == nil {
+		panic("URIVars' dependency can not be nil")
+	}
+
+	u := &uriVars{IntrospectorAPI: previous}
+	u.SetPrevious(previous)
+
+	return u
+}
+
+func (u *uriVars) Before() int {
+	for k, value := range u.URIVars {
+		field := u.Field("urivar", k)
 
 		if field == nil {
 			continue
