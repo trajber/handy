@@ -84,7 +84,7 @@ func TestIntrospectorCanNotInterface(t *testing.T) {
 		interceptor.IntrospectorAPI
 		f int `field:"f"`
 	}{}
-	intro := interceptor.NewIntrospector(nil, object)
+	intro := interceptor.NewIntrospector(nil, &object)
 	object.IntrospectorAPI = intro
 
 	if f := object.Field("field", "f"); f != nil {
@@ -97,7 +97,7 @@ func TestIntrospectorUnknownField(t *testing.T) {
 		interceptor.IntrospectorAPI
 		F int `field:"f"`
 	}{}
-	intro := interceptor.NewIntrospector(nil, object)
+	intro := interceptor.NewIntrospector(nil, &object)
 	object.IntrospectorAPI = intro
 
 	// It shouldn't change the state of the object
@@ -127,7 +127,7 @@ func TestIntrospectorEmbedded(t *testing.T) {
 		interceptor.IntrospectorAPI
 		dummy
 	}{}
-	intro := interceptor.NewIntrospector(nil, object)
+	intro := interceptor.NewIntrospector(nil, &object)
 	object.IntrospectorAPI = intro
 
 	if _, ok := object.Field("field", "f").(*int); !ok {

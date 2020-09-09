@@ -1,18 +1,16 @@
-package interceptor
+package interceptor_test
 
 import (
+	"handy"
+	"handy/interceptor"
 	"net"
 	"net/http"
 	"testing"
-
-	"github.com/trajber/handy"
 )
 
-type mockURIVarsHandler struct {
-	handy.DefaultHandler
-	IntrospectorCompliant
-
-	urivars handy.URIVars
+type uriVarsHandler struct {
+	handy.ProtoHandler
+	interceptor.URIVarsAPI
 
 	S   string  `urivar:"s"`
 	B   bool    `urivar:"b"`
@@ -31,12 +29,8 @@ type mockURIVarsHandler struct {
 	IP  net.IP  `urivar:"ip"`
 }
 
-func (m mockURIVarsHandler) URIVars() handy.URIVars {
-	return m.urivars
-}
-
 func TestURIVarsBefore(t *testing.T) {
-	urivars := map[string]string{
+	uriVars := handy.URIVars{
 		"s":     "Eita!",
 		"b":     "true",
 		"i":     "17",
@@ -55,11 +49,18 @@ func TestURIVarsBefore(t *testing.T) {
 		"extra": "Extra field",
 	}
 
-	handler := &mockURIVarsHandler{urivars: urivars}
-	i := NewIntrospector(handler)
-	i.Before()
-	u := NewURIVars(handler)
-	code := u.Before()
+	handler := &uriVarsHandler{}
+	intro := interceptor.NewIntrospector(nil, handler)
+	uri := interceptor.NewURIVars(intro)
+	handler.URIVarsAPI = uri
+
+	// The context is set automatically by the framework but on
+	// the tests we need to set it manually
+	ctx := handy.Context{URIVars: uriVars}
+	handler.SetContext(ctx)
+	uri.SetContext(ctx)
+
+	code := uri.Before()
 
 	if code != 0 {
 		t.Errorf("Wrong status code. Expecting “0”; found “%d”", code)
@@ -125,12 +126,19 @@ func TestURIVarsBefore(t *testing.T) {
 		t.Errorf("Wrong value. Expecting “192.168.0.1”; found “%s”", handler.IP)
 	}
 
-	urivars["i"] = "dezessete"
-	handler = &mockURIVarsHandler{urivars: urivars}
-	i = NewIntrospector(handler)
-	i.Before()
-	u = NewURIVars(handler)
-	code = u.Before()
+	uriVars["i"] = "dezessete"
+	handler = &uriVarsHandler{}
+	intro = interceptor.NewIntrospector(nil, handler)
+	uri = interceptor.NewURIVars(intro)
+	handler.URIVarsAPI = uri
+
+	// The context is set automatically by the framework but on
+	// the tests we need to set it manually
+	ctx = handy.Context{URIVars: uriVars}
+	handler.SetContext(ctx)
+	uri.SetContext(ctx)
+
+	code = uri.Before()
 
 	if code != http.StatusBadRequest {
 		t.Errorf("Unexpected status code. Expecting “%d”; found “%d”", http.StatusBadRequest, code)

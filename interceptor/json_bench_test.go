@@ -109,18 +109,12 @@ func TestJSONAfter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := handy.Context{Request: request}
+	writer := httptest.NewRecorder()
+	ctx := handy.Context{Request: request, ResponseWriter: writer}
 	_, intercept := newJSONHandler(ctx, handler)
 	handler.SetContext(ctx)
 	intercept.SetContext(ctx)
-	status := intercept.Before()
-
-	if status != http.StatusOK {
-		t.Errorf("Wrong status code. Expecting “200”; found “%d”", status)
-	}
-
-	w := httptest.NewRecorder()
-	status = intercept.After(http.StatusOK)
+	status := intercept.After(http.StatusOK)
 
 	if status != http.StatusOK {
 		t.Errorf("Wrong status code. Expecting “200”; found “%d”", status)
@@ -128,7 +122,7 @@ func TestJSONAfter(t *testing.T) {
 
 	expected := `{"Cinco":5,"Seis":"seis","Sete":[true,true,false]}`
 
-	if w.Body.String() != expected {
-		t.Errorf("Wrong response. Expecting “%s”; found “%s”", expected, w.Body.String())
+	if writer.Body.String() != expected {
+		t.Errorf("Wrong response. Expecting “%s”; found “%s”", expected, writer.Body.String())
 	}
 }
