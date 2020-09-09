@@ -81,7 +81,8 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	}
 	handler, interceptors := route.Handler()
 	handler.SetContext(c)
-	chain := buildChain(interceptors, c)
+	interceptors.SetContext(c)
+	chain := buildChain(interceptors)
 
 	var status int
 	var timeBefore time.Time

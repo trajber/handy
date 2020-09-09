@@ -95,16 +95,20 @@ func (i *ProtoInterceptor) SetPrevious(previous Interceptor) {
 
 func (i *ProtoInterceptor) SetContext(c Context) {
 	i.Context = c
+
+	// Recursively set context for all interceptors in the list
+	if i.previousInterceptor != nil {
+		i.previousInterceptor.SetContext(c)
+	}
 }
 
 // buildChain makes a new slice of interceptors, in the reverse order of
 // the one specified by the user.
-func buildChain(interceptor Interceptor, c Context) []Interceptor {
+func buildChain(interceptor Interceptor) []Interceptor {
 	// Pre-allocate some space for performance reasons.
 	chain := make([]Interceptor, 0, 8)
 
 	for i := interceptor.previous(); i != nil; i = i.previous() {
-		i.SetContext(c)
 		chain = append(chain, i)
 	}
 
