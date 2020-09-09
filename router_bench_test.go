@@ -4,7 +4,7 @@ import "testing"
 
 func BenchmarkFindRoute(b *testing.B) {
 	rt := NewRouter()
-	h := new(DefaultHandler)
+	h := new(ProtoHandler)
 	err := rt.AppendRoute("/test/{x}", func() Handler {
 		return h
 	})

@@ -4,7 +4,7 @@ import "testing"
 
 func TestAppendRoute(t *testing.T) {
 	rt := NewRouter()
-	h := new(DefaultHandler)
+	h := new(ProtoHandler)
 	err := rt.AppendRoute("/test/test", func() Handler { return h })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
@@ -33,7 +33,7 @@ func TestAppendRoute(t *testing.T) {
 
 func TestAppendWildCard(t *testing.T) {
 	rt := NewRouter()
-	h := new(DefaultHandler)
+	h := new(ProtoHandler)
 	err := rt.AppendRoute("/test/{x}", func() Handler { return h })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
@@ -57,7 +57,7 @@ func TestAppendWildCard(t *testing.T) {
 
 func TestAppendInvalidWildCard(t *testing.T) {
 	rt := NewRouter()
-	h := new(DefaultHandler)
+	h := new(ProtoHandler)
 
 	err := rt.AppendRoute("/test/{x}", func() Handler { return h })
 	if err != nil {
@@ -73,7 +73,7 @@ func TestAppendInvalidWildCard(t *testing.T) {
 
 func TestFindRoute(t *testing.T) {
 	rt := NewRouter()
-	h := new(DefaultHandler)
+	h := new(ProtoHandler)
 
 	err := rt.AppendRoute("/test", func() Handler { return h })
 	if err != nil {
@@ -90,7 +90,7 @@ func TestFindRoute(t *testing.T) {
 
 func TestMatchWithWildcard(t *testing.T) {
 	rt := NewRouter()
-	h := new(DefaultHandler)
+	h := new(ProtoHandler)
 	err := rt.AppendRoute("/test/{x}", func() Handler { return h })
 
 	if err != nil {
@@ -107,7 +107,7 @@ func TestMatchWithWildcard(t *testing.T) {
 
 func TestAppendSameRoute(t *testing.T) {
 	rt := NewRouter()
-	h := new(DefaultHandler)
+	h := new(ProtoHandler)
 	err := rt.AppendRoute("/test", func() Handler { return h })
 
 	if err != nil {
@@ -123,7 +123,7 @@ func TestAppendSameRoute(t *testing.T) {
 
 func TestMultipleWildCards(t *testing.T) {
 	rt := NewRouter()
-	h := new(DefaultHandler)
+	h := new(ProtoHandler)
 	err := rt.AppendRoute("/test/{x}/{y}", func() Handler { return h })
 
 	if err != nil {

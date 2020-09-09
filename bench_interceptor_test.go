@@ -7,7 +7,7 @@ import (
 )
 
 type TestInterceptorHandler struct {
-	DefaultHandler
+	ProtoHandler
 }
 
 type DummyInterceptor struct{}

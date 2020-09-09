@@ -7,7 +7,7 @@ import (
 )
 
 type TestHandler struct {
-	DefaultHandler
+	ProtoHandler
 }
 
 func BenchmarkSimpleRequest(b *testing.B) {

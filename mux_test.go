@@ -144,7 +144,7 @@ func (b *brokenAfterInterceptor) After(int) int {
 }
 
 type mockHandler struct {
-	DefaultHandler
+	ProtoHandler
 	handleFunc   func() int
 	interceptors InterceptorChain
 	methodCalled string

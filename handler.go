@@ -9,54 +9,43 @@ type Handler interface {
 	Delete() int
 	Patch() int
 	Head() int
-	Interceptors() InterceptorChain
-	setRequestInfo(w http.ResponseWriter, r *http.Request, u URIVars)
+	SetContext(Context)
 }
 
-type DefaultHandler struct {
-	NopInterceptorChain
-
-	response http.ResponseWriter
-	request  *http.Request
-	uriVars  URIVars
+type Context struct {
+	ResponseWriter http.ResponseWriter
+	Request        *http.Request
+	URIVars        URIVars
 }
 
-func (d *DefaultHandler) Get() int {
+type ProtoHandler struct {
+	Context
+}
+
+func (h *ProtoHandler) Get() int {
 	return http.StatusMethodNotAllowed
 }
 
-func (d *DefaultHandler) Post() int {
+func (h *ProtoHandler) Post() int {
 	return http.StatusMethodNotAllowed
 }
 
-func (d *DefaultHandler) Put() int {
+func (h *ProtoHandler) Put() int {
 	return http.StatusMethodNotAllowed
 }
 
-func (d *DefaultHandler) Delete() int {
+func (h *ProtoHandler) Delete() int {
 	return http.StatusMethodNotAllowed
 }
 
-func (d *DefaultHandler) Patch() int {
+func (h *ProtoHandler) Patch() int {
 	return http.StatusMethodNotAllowed
 }
 
-func (d *DefaultHandler) Head() int {
+func (h *ProtoHandler) Head() int {
 	return http.StatusMethodNotAllowed
 }
 
-func (d *DefaultHandler) ResponseWriter() http.ResponseWriter {
-	return d.response
-}
-
-func (d *DefaultHandler) Req() *http.Request {
-	return d.request
-}
-
-func (d *DefaultHandler) URIVars() URIVars {
-	return d.uriVars
-}
-
-func (d *DefaultHandler) setRequestInfo(w http.ResponseWriter, r *http.Request, u URIVars) {
-	*d = DefaultHandler{response: w, request: r, uriVars: u}
+func (h *ProtoHandler) SetContext(c Context) {
+	h.Context = c
 }
