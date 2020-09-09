@@ -1,41 +1,41 @@
-package interceptor
+package interceptor_test
 
 import (
-	"br/tests"
+	"handy"
+	"handy/interceptor"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/trajber/handy"
+	"github.com/kylelemons/godebug/pretty"
 )
 
-type mockJSONHandler struct {
-	IntrospectorCompliant
+type jsonHandler struct {
+	handy.ProtoHandler
+	interceptor.JSONCodecAPI
 
-	req     *http.Request
-	resp    http.ResponseWriter
-	Request struct {
+	RequestData struct {
 		Um   int
 		Dois string
 		Três struct {
 			Quatro []int
 		}
 	} `request:"put"`
-	Response struct {
+	ResponseData struct {
 		Cinco int
 		Seis  string
 		Sete  []bool
 	} `response:"get"`
 }
 
-func (m mockJSONHandler) Req() *http.Request {
-	return m.req
-}
+func newJSONHandler(ctx handy.Context, handler *jsonHandler) (handy.Handler, handy.Interceptor) {
+	intro := interceptor.NewIntrospector(nil, handler)
+	json := interceptor.NewJSONCodec(intro)
+	handler.JSONCodecAPI = json
 
-func (m mockJSONHandler) ResponseWriter() http.ResponseWriter {
-	return m.resp
+	return handler, json
 }
 
 func TestJSONBefore(t *testing.T) {
@@ -49,17 +49,20 @@ func TestJSONBefore(t *testing.T) {
 	}
 	`
 
-	req, err := http.NewRequest("PUT", "/", strings.NewReader(json))
+	request, err := http.NewRequest("PUT", "/", strings.NewReader(json))
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	handler := &mockJSONHandler{req: req}
-	i := NewIntrospector(handler)
-	i.Before()
-	u := NewJSONCodec(handler)
-	status := u.Before()
+	ctx := handy.Context{Request: request}
+	handler := &jsonHandler{}
+	_, intercept := newJSONHandler(ctx, handler)
+	// The framework sets the context automatically, but here in the
+	// tests we need to do it manually
+	handler.SetContext(ctx)
+	intercept.SetContext(ctx)
+	status := intercept.Before()
 
 	if status != 0 {
 		t.Errorf("Wrong status code. Expecting “0”; found “%d”", status)
@@ -81,24 +84,15 @@ func TestJSONBefore(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(expected, handler.Request) {
+	if !reflect.DeepEqual(expected, handler.RequestData) {
 		t.Error("Wrong request")
-		t.Log(tests.Diff(expected, handler.Request))
+		t.Log(pretty.Compare(expected, handler.RequestData))
 	}
 }
 
 func TestJSONAfter(t *testing.T) {
-	r, err := http.NewRequest("GET", "/", nil)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	w := httptest.NewRecorder()
-	handler := &mockJSONHandler{
-		req:  r,
-		resp: w,
-		Response: struct {
+	handler := &jsonHandler{
+		ResponseData: struct {
 			Cinco int
 			Seis  string
 			Sete  []bool
@@ -109,10 +103,24 @@ func TestJSONAfter(t *testing.T) {
 		},
 	}
 
-	i := NewIntrospector(handler)
-	i.Before()
-	u := NewJSONCodec(handler)
-	status := u.After(http.StatusOK)
+	request, err := http.NewRequest("GET", "/", nil)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := handy.Context{Request: request}
+	_, intercept := newJSONHandler(ctx, handler)
+	handler.SetContext(ctx)
+	intercept.SetContext(ctx)
+	status := intercept.Before()
+
+	if status != http.StatusOK {
+		t.Errorf("Wrong status code. Expecting “200”; found “%d”", status)
+	}
+
+	w := httptest.NewRecorder()
+	status = intercept.After(http.StatusOK)
 
 	if status != http.StatusOK {
 		t.Errorf("Wrong status code. Expecting “200”; found “%d”", status)
@@ -122,43 +130,5 @@ func TestJSONAfter(t *testing.T) {
 
 	if w.Body.String() != expected {
 		t.Errorf("Wrong response. Expecting “%s”; found “%s”", expected, w.Body.String())
-	}
-}
-
-var (
-	payload = `
-{
-	"name":"foo",
-	"id":10
-}`
-)
-
-type TestStruct struct {
-	Name string `json:"name"`
-	ID   int    `json:"id"`
-}
-
-func BenchmarkDecodeJSON(b *testing.B) {
-	req, err := http.NewRequest("GET", "/", strings.NewReader(payload))
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	w := httptest.NewRecorder()
-
-	handler := new(struct {
-		handy.DefaultHandler
-		IntrospectorCompliant
-		Request TestStruct `request:"get"`
-	})
-	handy.SetHandlerInfo(handler, w, req, nil)
-	codec := NewJSONCodec(handler)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		codec.Before()
-		if handler.Request.ID != 10 {
-			b.Fail()
-		}
 	}
 }
