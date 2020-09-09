@@ -1,41 +1,44 @@
-package handy
+package handy_test
 
 import (
 	"fmt"
+	"handy"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
+type interceptorConstructor func(handy.Interceptor) MockInterceptor
+
 func TestInterceptorOrder(t *testing.T) {
 	data := []struct {
 		description                    string
-		interceptors                   InterceptorChain
+		interceptors                   []interceptorConstructor
 		shouldBreakAtInterceptorNumber int
 	}{
 		{
 			description: "It should execute all interceptors and the handler",
-			interceptors: InterceptorChain{
-				&mockInterceptor{},
-				&mockInterceptor{},
-				&mockInterceptor{},
-				&mockInterceptor{},
+			interceptors: []interceptorConstructor{
+				newMockInterceptor,
+				newMockInterceptor,
+				newMockInterceptor,
+				newMockInterceptor,
 			},
 			shouldBreakAtInterceptorNumber: 1 << 10, // Shouldn't break at all
 		},
 		{
 			description: "It should break at the middle of the chain",
-			interceptors: InterceptorChain{
-				&mockInterceptor{},
-				&mockInterceptor{},
-				&brokenBeforeInterceptor{},
-				&mockInterceptor{},
+			interceptors: []interceptorConstructor{
+				newMockInterceptor,
+				newMockInterceptor,
+				newBrokenBeforeInterceptor,
+				newMockInterceptor,
 			},
 			shouldBreakAtInterceptorNumber: 2,
 		},
 	}
 
-	mux := NewHandy()
+	mux := handy.NewHandy()
 
 	for i, item := range data {
 		handleFuncCalled := false
@@ -44,12 +47,19 @@ func TestInterceptorOrder(t *testing.T) {
 				handleFuncCalled = true
 				return http.StatusOK
 			},
-			interceptors: item.interceptors,
 		}
 
 		uri := fmt.Sprintf("/uri/%d", i)
-		mux.Handle(uri, func() Handler {
-			return handler
+		var interceptors []MockInterceptor
+		mux.Handle(uri, func() (handy.Handler, handy.Interceptor) {
+			var interceptor MockInterceptor
+
+			for _, constructor := range item.interceptors {
+				interceptor = constructor(interceptor)
+				interceptors = append(interceptors, interceptor)
+			}
+
+			return handler, interceptor
 		})
 
 		w := httptest.NewRecorder()
@@ -61,24 +71,22 @@ func TestInterceptorOrder(t *testing.T) {
 
 		mux.ServeHTTP(w, r)
 
-		for k, interceptor := range item.interceptors {
-			interc := interceptor.(MockInterceptor)
-
+		for k, interceptor := range interceptors {
 			if k <= item.shouldBreakAtInterceptorNumber {
-				if !interc.BeforeMethodCalled() {
+				if !interceptor.BeforeMethodCalled() {
 					t.Errorf("Item %d, “%s”, not calling Before method for interceptor number %d", i, item.description, k)
 				}
 
-				if !interc.AfterMethodCalled() {
+				if !interceptor.AfterMethodCalled() {
 					t.Errorf("Item %d, “%s”, not calling After method for interceptor number %d", i, item.description, k)
 				}
 
 			} else {
-				if interc.BeforeMethodCalled() {
+				if interceptor.BeforeMethodCalled() {
 					t.Errorf("Item %d, “%s”, calling Before method for interceptor number %d", i, item.description, k)
 				}
 
-				if interc.AfterMethodCalled() {
+				if interceptor.AfterMethodCalled() {
 					t.Errorf("Item %d, “%s”, calling After method for interceptor number %d", i, item.description, k)
 				}
 			}
@@ -96,7 +104,15 @@ func TestInterceptorOrder(t *testing.T) {
 	}
 }
 
+func newMockInterceptor(previous handy.Interceptor) MockInterceptor {
+	i := new(mockInterceptor)
+	i.SetPrevious(previous)
+	return i
+}
+
 type mockInterceptor struct {
+	handy.ProtoInterceptor
+
 	beforeMethodCalled bool
 	afterMethodCalled  bool
 }
@@ -120,9 +136,15 @@ func (m *mockInterceptor) AfterMethodCalled() bool {
 }
 
 type MockInterceptor interface {
-	Interceptor
+	handy.Interceptor
 	BeforeMethodCalled() bool
 	AfterMethodCalled() bool
+}
+
+func newBrokenBeforeInterceptor(previous handy.Interceptor) MockInterceptor {
+	i := new(brokenBeforeInterceptor)
+	i.SetPrevious(previous)
+	return i
 }
 
 type brokenBeforeInterceptor struct {
@@ -132,6 +154,12 @@ type brokenBeforeInterceptor struct {
 func (b *brokenBeforeInterceptor) Before() int {
 	b.beforeMethodCalled = true
 	return http.StatusInternalServerError
+}
+
+func newBrokenAfterInterceptor(previous handy.Interceptor) MockInterceptor {
+	i := new(brokenAfterInterceptor)
+	i.SetPrevious(previous)
+	return i
 }
 
 type brokenAfterInterceptor struct {
@@ -144,9 +172,9 @@ func (b *brokenAfterInterceptor) After(int) int {
 }
 
 type mockHandler struct {
-	ProtoHandler
+	handy.ProtoHandler
+
 	handleFunc   func() int
-	interceptors InterceptorChain
 	methodCalled string
 }
 
@@ -178,8 +206,4 @@ func (m *mockHandler) Patch() int {
 func (m *mockHandler) Head() int {
 	m.methodCalled = "HEAD"
 	return m.handleFunc()
-}
-
-func (m *mockHandler) Interceptors() InterceptorChain {
-	return m.interceptors
 }

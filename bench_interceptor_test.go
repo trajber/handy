@@ -1,45 +1,41 @@
-package handy
+package handy_test
 
 import (
+	"handy"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-type TestInterceptorHandler struct {
-	ProtoHandler
+type testInterceptorHandler struct {
+	handy.ProtoHandler
 }
 
-type DummyInterceptor struct{}
+func NewTestInterceptorHandler() (handy.Handler, handy.Interceptor) {
+	return new(testInterceptorHandler), new(dummyinterceptor)
+}
 
-func (i *DummyInterceptor) Before() int {
+type dummyinterceptor struct {
+	handy.ProtoInterceptor
+}
+
+func (i *dummyinterceptor) Before() int {
 	for j := 0; j < 10000; j++ {
 	}
 
 	return 0
 }
 
-func (i *DummyInterceptor) After(int) int {
+func (i *dummyinterceptor) After(int) int {
 	for j := 0; j < 10000; j++ {
 	}
 
 	return 0
-}
-
-func (t *TestInterceptorHandler) Interceptors() InterceptorChain {
-	c := NewInterceptorChain()
-	for i := 0; i < 20; i++ {
-		c = c.Chain(new(DummyInterceptor))
-	}
-
-	return c
 }
 
 func BenchmarkInterceptorExecution(b *testing.B) {
-	mux := NewHandy()
-	mux.Handle("/foo", func() Handler {
-		return new(TestInterceptorHandler)
-	})
+	mux := handy.NewHandy()
+	mux.Handle("/foo", NewTestInterceptorHandler)
 
 	req, err := http.NewRequest("GET", "/foo", nil)
 	if err != nil {

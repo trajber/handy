@@ -2,6 +2,8 @@ package handy
 
 import "net/http"
 
+type HandlerConstructor func() (Handler, Interceptor)
+
 type Handler interface {
 	Get() int
 	Post() int

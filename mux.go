@@ -24,15 +24,13 @@ type Handy struct {
 	Recover        func(interface{})
 }
 
-type Constructor func() (Handler, Interceptor)
-
 func NewHandy() *Handy {
 	handy := new(Handy)
 	handy.router = NewRouter()
 	return handy
 }
 
-func (handy *Handy) Handle(pattern string, h Constructor) {
+func (handy *Handy) Handle(pattern string, h HandlerConstructor) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
