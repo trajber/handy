@@ -1,13 +1,16 @@
-package interceptor
+package interceptor_test
 
 import (
-	"br/tests"
+	"github.com/kylelemons/godebug/pretty"
+	"handy"
+	"handy/interceptor"
 	"testing"
 )
 
-func TestIntrospectorBefore(t *testing.T) {
+func TestIntrospector(t *testing.T) {
 	type introspectable struct {
-		IntrospectorCompliant
+		handy.ProtoHandler
+		interceptor.IntrospectorAPI
 
 		First  int    `one:"um"`
 		Second string `two:"dos,dois"`
@@ -15,20 +18,22 @@ func TestIntrospectorBefore(t *testing.T) {
 		Fourth *bool `other:"unrelated" four:"cinco,quatro"`
 	}
 
+	newIntrospectable := func(object *introspectable) (handy.Handler, handy.Interceptor) {
+		intro := interceptor.NewIntrospector(nil, object)
+		object.IntrospectorAPI = intro
+
+		return object, intro
+	}
+
 	isTrue := true
-	object := introspectable{
+	object := &introspectable{
 		First:  1,
 		Second: "segundo",
 		Third:  3,
 		Fourth: &isTrue,
 	}
 
-	i := NewIntrospector(&object)
-	code := i.Before()
-
-	if code != 0 {
-		t.Errorf("Wrong status code. Expecting “0”; found “%d”", code)
-	}
+	newIntrospectable(object)
 
 	if first, ok := object.Field("one", "um").(*int); !ok || &object.First != first {
 		t.Errorf("It didn't retrieved the right value. Expecting “%#v”; found “%#v”", first, object.Field("one", "um"))
@@ -60,13 +65,8 @@ func TestIntrospectorBefore(t *testing.T) {
 
 	// See if the check for a nil value works as expected
 
-	object = introspectable{}
-	i = NewIntrospector(&object)
-	code = i.Before()
-
-	if code != 0 {
-		t.Errorf("Wrong status code. Expecting “0”; found “%d”", code)
-	}
+	object = &introspectable{}
+	newIntrospectable(object)
 
 	if field := object.Field("four", "quatro"); field != nil {
 		t.Errorf("This value is supposed to be nil: %#v", field)
@@ -79,26 +79,26 @@ func TestIntrospectorBefore(t *testing.T) {
 	}
 }
 
-func TestIntrospectorBeforeCanNotInterface(t *testing.T) {
+func TestIntrospectorCanNotInterface(t *testing.T) {
 	object := struct {
-		IntrospectorCompliant
+		interceptor.IntrospectorAPI
 		f int `field:"f"`
 	}{}
-	i := NewIntrospector(&object)
-	i.Before()
+	intro := interceptor.NewIntrospector(nil, object)
+	object.IntrospectorAPI = intro
 
 	if f := object.Field("field", "f"); f != nil {
 		t.Errorf("The value %#v is supposed to be nil", f)
 	}
 }
 
-func TestIntrospectorBeforeUnknownField(t *testing.T) {
+func TestIntrospectorUnknownField(t *testing.T) {
 	object := struct {
-		IntrospectorCompliant
+		interceptor.IntrospectorAPI
 		F int `field:"f"`
 	}{}
-	i := NewIntrospector(&object)
-	i.Before()
+	intro := interceptor.NewIntrospector(nil, object)
+	object.IntrospectorAPI = intro
 
 	// It shouldn't change the state of the object
 
@@ -106,13 +106,13 @@ func TestIntrospectorBeforeUnknownField(t *testing.T) {
 	object.SetField("missing", "field", 17)
 
 	if copied.F != object.F {
-		t.Errorf("Both objects are expected to be equal:\n%s", tests.Diff(copied, object))
+		t.Errorf("Both objects are expected to be equal:\n%s", pretty.Compare(copied, object))
 	}
 
 	object.SetField("field", "g", 17)
 
 	if copied.F != object.F {
-		t.Errorf("Both objects are expected to be equal:\n%s", tests.Diff(copied, object))
+		t.Errorf("Both objects are expected to be equal:\n%s", pretty.Compare(copied, object))
 	}
 
 	f := object.Field("missing", "field")
@@ -122,14 +122,13 @@ func TestIntrospectorBeforeUnknownField(t *testing.T) {
 	}
 }
 
-func TestIntrospectorBeforeEmbedded(t *testing.T) {
+func TestIntrospectorEmbedded(t *testing.T) {
 	object := struct {
-		IntrospectorCompliant
+		interceptor.IntrospectorAPI
 		dummy
 	}{}
-
-	i := NewIntrospector(&object)
-	i.Before()
+	intro := interceptor.NewIntrospector(nil, object)
+	object.IntrospectorAPI = intro
 
 	if _, ok := object.Field("field", "f").(*int); !ok {
 		t.Error("It didn't identify the object")
