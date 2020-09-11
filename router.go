@@ -6,7 +6,6 @@ import (
 )
 
 var (
-	ErrRouteNotFound      = errors.New("Router not found")
 	ErrRouteAlreadyExists = errors.New("Route already exists")
 	ErrCannotAppendRoute  = errors.New("Cannot append route")
 	ErrOnlyOneWildcard    = errors.New("Only one wildcard is allowed in this level")
@@ -146,7 +145,7 @@ type routeMatch struct {
 }
 
 // This method rebuilds a route based on a given URI
-func (r *router) match(uri string) (*routeMatch, error) {
+func (r *router) match(uri string) *routeMatch {
 	rt := new(routeMatch)
 	rt.URIVars = make(URIVars)
 
@@ -159,7 +158,7 @@ func (r *router) match(uri string) (*routeMatch, error) {
 
 		n := current.findChild(v)
 		if n == nil {
-			return rt, ErrRouteNotFound
+			return nil
 		}
 
 		if n.isWildcard {
@@ -170,9 +169,9 @@ func (r *router) match(uri string) (*routeMatch, error) {
 	}
 
 	if current.handler == nil {
-		return rt, ErrRouteNotFound
+		return nil
 	}
 
 	rt.Handler = current.handler
-	return rt, nil
+	return rt
 }

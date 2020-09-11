@@ -63,9 +63,9 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		}
 	}()
 
-	route, err := handy.router.match(request.URL.Path)
+	route := handy.router.match(request.URL.Path)
 
-	if err != nil {
+	if route == nil {
 		if NoMatchFunc != nil {
 			NoMatchFunc(writer, request)
 		} else {
