@@ -8,7 +8,7 @@ type Interceptor interface {
 	previous() Interceptor
 }
 
-// ProtoInterceptor ads support for a struct to be used as an interceptor. It
+// ProtoInterceptor adds support for a struct to be used as an interceptor. It
 // is expected to be embedded in all interceptors.
 type ProtoInterceptor struct {
 	Context
