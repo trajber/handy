@@ -3,68 +3,68 @@ package handy
 import "testing"
 
 func TestAppendRoute(t *testing.T) {
-	rt := NewRouter()
+	rt := newRouter()
 	h := new(ProtoHandler)
-	err := rt.AppendRoute("/test/test", func() (Handler, Interceptor) { return h, nil })
+	err := rt.appendRoute("/test/test", func() (Handler, Interceptor) { return h, nil })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	err = rt.AppendRoute("/test", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test", func() (Handler, Interceptor) { return h, nil })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	err = rt.AppendRoute("/test/test", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test/test", func() (Handler, Interceptor) { return h, nil })
 	if err == nil {
 		t.Fatal("Appending the same route twice")
 	}
 
-	err = rt.AppendRoute("/test", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test", func() (Handler, Interceptor) { return h, nil })
 	if err == nil {
 		t.Fatal("Appending the same route twice")
 	}
 
-	err = rt.AppendRoute("/test/", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test/", func() (Handler, Interceptor) { return h, nil })
 	if err == nil {
 		t.Fatal("Appending the same route twice", err)
 	}
 }
 
 func TestAppendWildCard(t *testing.T) {
-	rt := NewRouter()
+	rt := newRouter()
 	h := new(ProtoHandler)
-	err := rt.AppendRoute("/test/{x}", func() (Handler, Interceptor) { return h, nil })
+	err := rt.appendRoute("/test/{x}", func() (Handler, Interceptor) { return h, nil })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	err = rt.AppendRoute("/test/{x}/test", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test/{x}/test", func() (Handler, Interceptor) { return h, nil })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	err = rt.AppendRoute("/test/{x}", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test/{x}", func() (Handler, Interceptor) { return h, nil })
 	if err == nil {
 		t.Fatal("Appending the same route twice")
 	}
 
-	err = rt.AppendRoute("/test/{x}/test", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test/{x}/test", func() (Handler, Interceptor) { return h, nil })
 	if err == nil {
 		t.Fatal("Appending the same route twice")
 	}
 }
 
 func TestAppendInvalidWildCard(t *testing.T) {
-	rt := NewRouter()
+	rt := newRouter()
 	h := new(ProtoHandler)
 
-	err := rt.AppendRoute("/test/{x}", func() (Handler, Interceptor) { return h, nil })
+	err := rt.appendRoute("/test/{x}", func() (Handler, Interceptor) { return h, nil })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	err = rt.AppendRoute("/test/{y}", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test/{y}", func() (Handler, Interceptor) { return h, nil })
 	t.Log(err)
 	if err == nil {
 		t.Fatal("A invalid node was appended", err)
@@ -72,15 +72,15 @@ func TestAppendInvalidWildCard(t *testing.T) {
 }
 
 func TestFindRoute(t *testing.T) {
-	rt := NewRouter()
+	rt := newRouter()
 	h := new(ProtoHandler)
 
-	err := rt.AppendRoute("/test", func() (Handler, Interceptor) { return h, nil })
+	err := rt.appendRoute("/test", func() (Handler, Interceptor) { return h, nil })
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.Match("/test")
+	route, err := rt.match("/test")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
 	}
@@ -89,15 +89,15 @@ func TestFindRoute(t *testing.T) {
 }
 
 func TestMatchWithWildcard(t *testing.T) {
-	rt := NewRouter()
+	rt := newRouter()
 	h := new(ProtoHandler)
-	err := rt.AppendRoute("/test/{x}", func() (Handler, Interceptor) { return h, nil })
+	err := rt.appendRoute("/test/{x}", func() (Handler, Interceptor) { return h, nil })
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.Match("/test/foo")
+	route, err := rt.match("/test/foo")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
 	}
@@ -106,15 +106,15 @@ func TestMatchWithWildcard(t *testing.T) {
 }
 
 func TestAppendSameRoute(t *testing.T) {
-	rt := NewRouter()
+	rt := newRouter()
 	h := new(ProtoHandler)
-	err := rt.AppendRoute("/test", func() (Handler, Interceptor) { return h, nil })
+	err := rt.appendRoute("/test", func() (Handler, Interceptor) { return h, nil })
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	err = rt.AppendRoute("/test", func() (Handler, Interceptor) { return h, nil })
+	err = rt.appendRoute("/test", func() (Handler, Interceptor) { return h, nil })
 
 	if err == nil {
 		t.Fatal("Overriting route. This sould not happen.")
@@ -122,15 +122,15 @@ func TestAppendSameRoute(t *testing.T) {
 }
 
 func TestMultipleWildCards(t *testing.T) {
-	rt := NewRouter()
+	rt := newRouter()
 	h := new(ProtoHandler)
-	err := rt.AppendRoute("/test/{x}/{y}", func() (Handler, Interceptor) { return h, nil })
+	err := rt.appendRoute("/test/{x}/{y}", func() (Handler, Interceptor) { return h, nil })
 
 	if err != nil {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.Match("/test/foo/bar")
+	route, err := rt.match("/test/foo/bar")
 	if err != nil {
 		t.Fatal("Cannot find a valid route;", err)
 	}

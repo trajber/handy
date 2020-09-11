@@ -3,9 +3,9 @@ package handy
 import "testing"
 
 func BenchmarkFindRoute(b *testing.B) {
-	rt := NewRouter()
+	rt := newRouter()
 	h := new(ProtoHandler)
-	err := rt.AppendRoute("/test/{x}", func() (Handler, Interceptor) {
+	err := rt.appendRoute("/test/{x}", func() (Handler, Interceptor) {
 		return h, nil
 	})
 
@@ -16,7 +16,7 @@ func BenchmarkFindRoute(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := rt.Match("/test/foo")
+		_, err := rt.match("/test/foo")
 		if err != nil {
 			b.Fatal("Cannot find a valid route;", err)
 		}

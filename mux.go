@@ -1,3 +1,7 @@
+// Handy is a fast and simple HTTP multiplexer. It favors composition by
+// introducing the concept of interceptors, allowing you to reduce the logic
+// of your handler to a minimum specific part, whereas the common logic shared
+// by several handlers is implemented in many composable interceptors.
 package handy
 
 import (
@@ -10,23 +14,25 @@ import (
 )
 
 var (
-	ErrorFunc        = func(error) {}
-	NoMatchFunc      = func(http.ResponseWriter, *http.Request) {}
+	NoMatchFunc = func(http.ResponseWriter, *http.Request) {}
+)
+
+var (
 	ProfilingEnabled = false
 	ProfileFunc      = func(string) {}
 )
 
 type Handy struct {
 	mu             sync.RWMutex
-	router         *Router
+	router         *router
 	currentClients int32
 	CountClients   bool
 	Recover        func(interface{})
 }
 
-func NewHandy() *Handy {
+func New() *Handy {
 	handy := new(Handy)
-	handy.router = NewRouter()
+	handy.router = newRouter()
 	return handy
 }
 
@@ -34,7 +40,7 @@ func (handy *Handy) Handle(pattern string, h HandlerConstructor) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
-	if err := handy.router.AppendRoute(pattern, h); err != nil {
+	if err := handy.router.appendRoute(pattern, h); err != nil {
 		panic("Cannot append route;" + err.Error())
 	}
 }
@@ -57,7 +63,7 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		}
 	}()
 
-	route, err := handy.router.Match(request.URL.Path)
+	route, err := handy.router.match(request.URL.Path)
 
 	if err != nil {
 		if NoMatchFunc != nil {

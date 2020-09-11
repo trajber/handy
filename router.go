@@ -22,13 +22,13 @@ type node struct {
 	wildcardName     string
 }
 
-type Router struct {
+type router struct {
 	root    *node
 	current *node
 }
 
-func NewRouter() *Router {
-	r := new(Router)
+func newRouter() *router {
+	r := new(router)
 	root := new(node)
 	root.children = make(map[string]*node)
 	r.root = root
@@ -44,7 +44,7 @@ func cleanWildcard(l string) string {
 	return l[1 : len(l)-1]
 }
 
-func (r *Router) nodeExists(n string) (*node, bool) {
+func (r *router) nodeExists(n string) (*node, bool) {
 	v, ok := r.current.children[n]
 	if !ok && r.current.hasChildWildcard {
 		if isWildcard(n) {
@@ -57,7 +57,7 @@ func (r *Router) nodeExists(n string) (*node, bool) {
 	return v, ok
 }
 
-func (r *Router) AppendRoute(uri string, h HandlerConstructor) error {
+func (r *router) appendRoute(uri string, h HandlerConstructor) error {
 	uri = strings.TrimSpace(uri)
 
 	// Make sure we are not appending the root ("/"), otherwise remove final slash
@@ -140,14 +140,14 @@ func (n *node) findChild(name string) *node {
 
 type URIVars map[string]string
 
-type RouteMatch struct {
+type routeMatch struct {
 	URIVars URIVars
 	Handler HandlerConstructor
 }
 
 // This method rebuilds a route based on a given URI
-func (r *Router) Match(uri string) (*RouteMatch, error) {
-	rt := new(RouteMatch)
+func (r *router) match(uri string) (*routeMatch, error) {
+	rt := new(routeMatch)
 	rt.URIVars = make(URIVars)
 
 	current := r.current

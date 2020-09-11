@@ -38,7 +38,7 @@ func TestInterceptorOrder(t *testing.T) {
 		},
 	}
 
-	mux := handy.NewHandy()
+	mux := handy.New()
 
 	for i, item := range data {
 		handleFuncCalled := false

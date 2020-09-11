@@ -34,7 +34,7 @@ func (i *dummyinterceptor) After(int) int {
 }
 
 func BenchmarkInterceptorExecution(b *testing.B) {
-	mux := handy.NewHandy()
+	mux := handy.New()
 	mux.Handle("/foo", NewTestInterceptorHandler)
 
 	req, err := http.NewRequest("GET", "/foo", nil)

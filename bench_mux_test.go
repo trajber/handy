@@ -11,7 +11,7 @@ type TestHandler struct {
 }
 
 func BenchmarkSimpleRequest(b *testing.B) {
-	mux := NewHandy()
+	mux := New()
 	mux.Handle("/foo", func() (Handler, Interceptor) {
 		return new(TestHandler), nil
 	})
@@ -30,7 +30,7 @@ func BenchmarkSimpleRequest(b *testing.B) {
 }
 
 func BenchmarkPathWithVariable(b *testing.B) {
-	mux := NewHandy()
+	mux := New()
 	mux.Handle("/foo/{name}", func() (Handler, Interceptor) {
 		return new(TestHandler), nil
 	})
@@ -49,7 +49,7 @@ func BenchmarkPathWithVariable(b *testing.B) {
 }
 
 func BenchmarkPathWithVariables(b *testing.B) {
-	mux := NewHandy()
+	mux := New()
 	mux.Handle("/foo/{name}/{age}/{nono}", func() (Handler, Interceptor) {
 		return new(TestHandler), nil
 	})
