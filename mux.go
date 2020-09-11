@@ -5,21 +5,13 @@
 package handy
 
 import (
-	"fmt"
 	"net/http"
-	"reflect"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 var (
 	NoMatchFunc = func(http.ResponseWriter, *http.Request) {}
-)
-
-var (
-	ProfilingEnabled = false
-	ProfileFunc      = func(string) {}
 )
 
 type Handy struct {
@@ -89,35 +81,17 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	chain := buildChain(interceptors)
 
 	var status int
-	var timeBefore time.Time
-	var elapsed float64
 
 	// chain is in reverse order
 	for k := len(chain) - 1; k >= 0; k-- {
 		interceptor := chain[k]
-
-		if ProfilingEnabled {
-			timeBefore = time.Now()
-		}
-
 		status = interceptor.Before()
-
-		if ProfilingEnabled {
-			elapsed = time.Since(timeBefore).Seconds()
-			v := reflect.ValueOf(interceptor)
-			msg := fmt.Sprintf("Interceptor Before %s - %.4f", v.Elem().Type().Name(), elapsed)
-			ProfileFunc(msg)
-		}
 
 		// If the interceptor reported some status, interrupt the chain
 		if status != 0 {
 			chain = chain[k:]
 			goto write
 		}
-	}
-
-	if ProfilingEnabled {
-		timeBefore = time.Now()
 	}
 
 	switch request.Method {
@@ -137,25 +111,10 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		status = http.StatusMethodNotAllowed
 	}
 
-	if ProfilingEnabled {
-		elapsed = time.Since(timeBefore).Seconds()
-		msg := fmt.Sprintf("%s %s - %.4f", request.Method, request.RequestURI, elapsed)
-		ProfileFunc(msg)
-	}
-
 write:
 	// executing all interceptors' After methods, in reverse order
 	for _, interceptor := range chain {
-		if ProfilingEnabled {
-			timeBefore = time.Now()
-		}
 		s := interceptor.After(status)
-		if ProfilingEnabled {
-			elapsed = time.Since(timeBefore).Seconds()
-			v := reflect.ValueOf(interceptor)
-			msg := fmt.Sprintf("Interceptor After %s - %.4f", v.Elem().Type().Name(), elapsed)
-			ProfileFunc(msg)
-		}
 
 		if s != 0 {
 			status = s
