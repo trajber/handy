@@ -80,9 +80,9 @@ func TestFindRoute(t *testing.T) {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.match("/test")
-	if err != nil {
-		t.Fatal("Cannot find a valid route;", err)
+	route := rt.match("/test")
+	if route == nil {
+		t.Fatal("Cannot find a valid route")
 	}
 
 	t.Log(route.URIVars)
@@ -97,9 +97,9 @@ func TestMatchWithWildcard(t *testing.T) {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.match("/test/foo")
-	if err != nil {
-		t.Fatal("Cannot find a valid route;", err)
+	route := rt.match("/test/foo")
+	if route == nil {
+		t.Fatal("Cannot find a valid route")
 	}
 
 	t.Log(route.URIVars)
@@ -130,8 +130,8 @@ func TestMultipleWildCards(t *testing.T) {
 		t.Fatal("Cannot append a valid route", err)
 	}
 
-	route, err := rt.match("/test/foo/bar")
-	if err != nil {
+	route := rt.match("/test/foo/bar")
+	if route == nil {
 		t.Fatal("Cannot find a valid route;", err)
 	}
 

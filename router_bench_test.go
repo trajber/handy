@@ -16,9 +16,9 @@ func BenchmarkFindRoute(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := rt.match("/test/foo")
-		if err != nil {
-			b.Fatal("Cannot find a valid route;", err)
+		route := rt.match("/test/foo")
+		if route == nil {
+			b.Fatal("Cannot find a valid route")
 		}
 	}
 }
