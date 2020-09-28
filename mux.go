@@ -10,9 +10,7 @@ import (
 	"sync/atomic"
 )
 
-var (
-	NoMatchFunc = func(http.ResponseWriter, *http.Request) {}
-)
+var CatchAllHandler http.Handler
 
 type Handy struct {
 	mu             sync.RWMutex
@@ -58,13 +56,9 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	route := handy.router.match(request.URL.Path)
 
 	if route == nil {
-		if NoMatchFunc != nil {
-			NoMatchFunc(writer, request)
+		if CatchAllHandler != nil {
+			CatchAllHandler.ServeHTTP(writer, request)
 		} else {
-			// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
-			// The server has not found anything matching the Request-URI. No
-			// indication is given of whether the condition is temporary or
-			// permanent.
 			writer.WriteHeader(http.StatusNotFound)
 		}
 		return
