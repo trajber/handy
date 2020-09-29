@@ -64,7 +64,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"sync/atomic"
 )
 
 // CatchAllHandler, if defined, is called whenever a request is made for a route
@@ -74,12 +73,10 @@ var CatchAllHandler http.Handler
 
 // Handy is the multiplexer of the framework.
 type Handy struct {
-	CountClients bool
-	Recover      func(interface{})
+	Recover func(interface{})
 
-	mu             sync.RWMutex
-	router         *router
-	currentClients int32
+	mu     sync.RWMutex
+	router *router
 }
 
 // New returns a new Handy multiplexer.
@@ -99,11 +96,6 @@ func (handy *Handy) Handle(route string, handler func() (Handler, Interceptor)) 
 }
 
 func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	if handy.CountClients {
-		atomic.AddInt32(&handy.currentClients, 1)
-		defer atomic.AddInt32(&handy.currentClients, -1)
-	}
-
 	handy.mu.RLock()
 	defer handy.mu.RUnlock()
 
