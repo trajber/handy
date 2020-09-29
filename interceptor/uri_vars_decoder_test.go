@@ -30,7 +30,7 @@ type uriVarsHandler struct {
 }
 
 func TestURIVarsBefore(t *testing.T) {
-	uriVars := handy.URIVars{
+	uriVars := map[string]string{
 		"s":     "Eita!",
 		"b":     "true",
 		"i":     "17",

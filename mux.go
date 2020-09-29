@@ -2,6 +2,62 @@
 // introducing the concept of interceptors, allowing you to reduce the logic
 // of your handler to a minimum specific part, whereas the common logic shared
 // by several handlers is implemented in many composable interceptors.
+//
+// In its most basic form, it allows the logic of your handler to be split by HTTP method:
+//
+//     func main() {
+//         server := handy.New()
+//         server.Handle("/user/{username}", func() (handy.Handler, handy.Interceptor) {
+//             return &userHandler{}, nil
+//         })
+//
+//         http.ListenAndServe(":8181", server)
+//     }
+//
+//     type userHandler struct {
+//         handy.ProtoHandler
+//     }
+//
+//     func (h *userHandler) Get() int {
+//         username := h.URIVars["username"]
+//         response := ...
+//         h.ResponseWriter.Write(...)
+//         return http.StatusOK
+//     }
+//
+// The true power comes when you plug interceptors into the pipeline:
+//
+//     func main() {
+//         server := handy.New()
+//         server.Handle("population/{city}/{year}", func() (handy.Handler, handy.Interceptor) {
+//             handler := new(userHandler)
+//             introspector := interceptor.NewIntrospector(nil, handler)
+//             uriVars := interceptor.NewURIVars(introspector)
+//             codec := interceptor.NewJSONCodec(uriVars)
+//             return handler, codec
+//         })
+//
+//         http.ListenAndServe(":8181", server)
+//     }
+//
+//     type userHandler struct {
+//         handy.ProtoHandler
+//
+//         City string `urivar:"city"`
+//         Year int `urivar:"year"`
+//         Response Statistics `response:"get"`
+//     }
+//
+//     func (h *userHandler) Get() int {
+//         statistics := populationByCityAndYear(h.City, h.Year)
+//         h.Response = statistics
+//         return http.StatusOK
+//     }
+//
+// As you can see, interceptors can automatically parse URI variables and handle
+// marshaling and unmarshaling of requests and responses. And you can also
+// write your custom interceptors to do all sort of stuff, like database
+// transaction management and data validation.
 package handy
 
 import (
@@ -10,14 +66,19 @@ import (
 	"sync/atomic"
 )
 
+// CatchAllHandler, if defined, is called whenever a request is made for a route
+// without any registered handler. You can use it, for instance, to send custom
+// 404 responses.
 var CatchAllHandler http.Handler
 
+// Handy is the multiplexer of the framework.
 type Handy struct {
+	CountClients bool
+	Recover      func(interface{})
+
 	mu             sync.RWMutex
 	router         *router
 	currentClients int32
-	CountClients   bool
-	Recover        func(interface{})
 }
 
 func New() *Handy {
@@ -26,7 +87,7 @@ func New() *Handy {
 	return handy
 }
 
-func (handy *Handy) Handle(pattern string, h HandlerConstructor) {
+func (handy *Handy) Handle(pattern string, h func() (Handler, Interceptor)) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
@@ -81,7 +142,7 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		interceptor := chain[k]
 		status = interceptor.Before()
 
-		// If the interceptor reported some status, interrupt the chain
+		// If the interceptor reports some status, interrupt the chain
 		if status != 0 {
 			chain = chain[k:]
 			goto write
@@ -89,17 +150,17 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 	}
 
 	switch request.Method {
-	case "GET":
+	case http.MethodGet:
 		status = handler.Get()
-	case "POST":
+	case http.MethodPost:
 		status = handler.Post()
-	case "PUT":
+	case http.MethodPut:
 		status = handler.Put()
-	case "DELETE":
+	case http.MethodDelete:
 		status = handler.Delete()
-	case "PATCH":
+	case http.MethodPatch:
 		status = handler.Patch()
-	case "HEAD":
+	case http.MethodHead:
 		status = handler.Head()
 	default:
 		status = http.StatusMethodNotAllowed

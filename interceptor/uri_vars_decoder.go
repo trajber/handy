@@ -6,7 +6,7 @@ import (
 )
 
 type uriVarsHandler interface {
-	URIVars() handy.URIVars
+	URIVars() map[string]string
 	Field(string, string) interface{}
 }
 
