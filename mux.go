@@ -89,12 +89,12 @@ func New() *Handy {
 	return handy
 }
 
-func (handy *Handy) Handle(pattern string, h func() (Handler, Interceptor)) {
+func (handy *Handy) Handle(route string, handler func() (Handler, Interceptor)) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
-	if err := handy.router.appendRoute(pattern, h); err != nil {
-		panic(fmt.Sprintf("cannot append route “%s”: %v", pattern, err.Error()))
+	if err := handy.router.appendRoute(route, handler); err != nil {
+		panic(fmt.Sprintf("cannot append route “%s”: %v", route, err.Error()))
 	}
 }
 
@@ -127,11 +127,7 @@ func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	c := Context{
-		ResponseWriter: writer,
-		Request:        request,
-		URIVars:        route.URIVars,
-	}
+	c := Context{ResponseWriter: writer, Request: request, URIVars: route.URIVars}
 	handler, interceptors := route.Handler()
 	handler.SetContext(c)
 	interceptors.SetContext(c)
