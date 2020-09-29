@@ -61,6 +61,7 @@
 package handy
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -81,6 +82,7 @@ type Handy struct {
 	currentClients int32
 }
 
+// New returns a new Handy multiplexer.
 func New() *Handy {
 	handy := new(Handy)
 	handy.router = newRouter()
@@ -92,7 +94,7 @@ func (handy *Handy) Handle(pattern string, h func() (Handler, Interceptor)) {
 	defer handy.mu.Unlock()
 
 	if err := handy.router.appendRoute(pattern, h); err != nil {
-		panic("Cannot append route;" + err.Error())
+		panic(fmt.Sprintf("cannot append route “%s”: %v", pattern, err.Error()))
 	}
 }
 
