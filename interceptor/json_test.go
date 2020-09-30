@@ -14,7 +14,6 @@ import (
 
 type jsonHandler struct {
 	handy.BaseHandler
-	interceptor.JSONCodecAPI
 
 	RequestData struct {
 		Um   int
@@ -33,7 +32,6 @@ type jsonHandler struct {
 func newJSONHandler(ctx handy.Context, handler *jsonHandler) (handy.Handler, handy.Interceptor) {
 	intro := interceptor.NewIntrospector(nil, handler)
 	json := interceptor.NewJSONCodec(intro)
-	handler.JSONCodecAPI = json
 
 	return handler, json
 }
