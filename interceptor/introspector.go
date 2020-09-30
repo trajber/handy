@@ -10,14 +10,29 @@ import (
 
 var tagFormat = regexp.MustCompile(`(\w+):"([^"]+)"`)
 
+// Introspector is used by other interceptors for querying fields of structs.
+//
+// Many interceptors, like QueryString and JSONCodec, need to query tags inside
+// the handler using introspecting facilities of the Go language. Introspector
+// provides a unifying API to perform such queries.
 type Introspector interface {
 	handy.Interceptor
 	IntrospectorAPI
 }
 
+// IntrospectorAPI is the API provided by Introspector to other interceptors.
 type IntrospectorAPI interface {
+	// SetField sets a structure's field tagged in the format `tag:"value"`
+	// with the value in the data argument.
 	SetField(tag, value string, data interface{})
+
+	// Field queries the value of a structure's field tagged in the format
+	// `tag:"value"`
 	Field(tag, value string) interface{}
+
+	// KeysWithTag queries the names of the values of a structure's field. For
+	// instance, if the field is tagged as `response:"put,post"`,
+	// KeysWithTag("response") returns ["put", "post"].
 	KeysWithTag(tag string) []string
 }
 
@@ -27,6 +42,10 @@ type introspector struct {
 	fields structFields
 }
 
+// NewIntrospector creates an Introspector that uses reflection to inspect the
+// the structure passed as the second argument. The created Introspector will
+// be run by Handy just after the previous interceptor (passed as the first
+// argument) executed successfully.
 func NewIntrospector(previous handy.Interceptor, structure interface{}) Introspector {
 	intro := &introspector{fields: make(structFields)}
 	intro.SetPrevious(previous)
