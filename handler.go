@@ -25,7 +25,7 @@ type Handler interface {
 
 	// SetContext is used internally by the framework to set Context
 	// information on each handler. It's not meant to be called by the user,
-	// but it's exported in order to be used to inject mock data during your
+	// but it's exported as a convenience to inject mock data during your
 	// tests.
 	SetContext(Context)
 }
@@ -44,7 +44,7 @@ type Context struct {
 }
 
 // BaseHandler is a prototype implementation for a handler. It must be embedded
-// in all of your handlers to make them compatible with Handy.
+// in all handlers to make them compatible with Handy.
 type BaseHandler struct {
 	Context
 }

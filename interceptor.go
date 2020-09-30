@@ -55,7 +55,7 @@ package handy
 //
 // If any of the interceptors' Before method returns a non-zero value, the
 // execution chain is interrupted and neither the subsequent interceptors nor
-// the handler are called. It's like having the following code:
+// the handler are called. It acts as if the following code were executed:
 //
 //     result := a.Before()
 //
@@ -84,18 +84,27 @@ type Interceptor interface {
 	previous() Interceptor
 }
 
-// BaseInterceptor adds support for a struct to be used as an interceptor. It
-// is expected to be embedded in all interceptors.
+// BaseInterceptor is a prototype implementation for an interceptor. It must be
+// embedded in all interceptors to make them compatible with Handy.
 type BaseInterceptor struct {
+	// Context allows the interceptor to interact with the request and
+	// eventually write custom responses.
 	Context
 
 	previousInterceptor Interceptor
 }
 
+// Before is the first interceptor's method called. A returned value of zero
+// signals that everything is OK and the execution chain should continue. A
+// non-zero value interrupts the execution chain and its After method, as well
+// as all After methods of previous interceptors, are called with such a value
+// as an argument.
 func (i *BaseInterceptor) Before() int {
 	return 0
 }
 
+// After is the last interceptor's method called. It receives as argument the
+// value propagated by the method calls in the execution chain.
 func (i *BaseInterceptor) After(status int) int {
 	return status
 }
@@ -108,6 +117,9 @@ func (i *BaseInterceptor) SetPrevious(previous Interceptor) {
 	i.previousInterceptor = previous
 }
 
+// SetContext is used internally by the framework to set Context information on
+// each interceptor. It's not meant to be called by the user, but it's exported
+// as a convenience to inject mock data during your tests.
 func (i *BaseInterceptor) SetContext(c Context) {
 	i.Context = c
 

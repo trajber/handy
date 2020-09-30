@@ -137,8 +137,6 @@ func (n *node) findChild(name string) *node {
 	return v
 }
 
-type URIVars map[string]string
-
 type routeMatch struct {
 	URIVars map[string]string
 	Handler func() (Handler, Interceptor)
