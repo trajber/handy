@@ -13,7 +13,6 @@ import (
 
 type queryStringHandler struct {
 	handy.BaseHandler
-	interceptor.QueryStringAPI
 
 	request *http.Request
 
@@ -164,7 +163,6 @@ func TestQueryStringBefore(t *testing.T) {
 		handler.Custom = &item.customTypeMock
 		intro := interceptor.NewIntrospector(nil, handler)
 		query := interceptor.NewQueryString(intro)
-		handler.QueryStringAPI = query
 
 		// The context is set automatically by the framework but on
 		// the tests we need to set it manually
