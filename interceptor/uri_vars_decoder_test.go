@@ -10,7 +10,6 @@ import (
 
 type uriVarsHandler struct {
 	handy.BaseHandler
-	interceptor.URIVarsAPI
 
 	S   string  `urivar:"s"`
 	B   bool    `urivar:"b"`
@@ -52,7 +51,6 @@ func TestURIVarsBefore(t *testing.T) {
 	handler := &uriVarsHandler{}
 	intro := interceptor.NewIntrospector(nil, handler)
 	uri := interceptor.NewURIVars(intro)
-	handler.URIVarsAPI = uri
 
 	// The context is set automatically by the framework but on
 	// the tests we need to set it manually
@@ -130,7 +128,6 @@ func TestURIVarsBefore(t *testing.T) {
 	handler = &uriVarsHandler{}
 	intro = interceptor.NewIntrospector(nil, handler)
 	uri = interceptor.NewURIVars(intro)
-	handler.URIVarsAPI = uri
 
 	// The context is set automatically by the framework but on
 	// the tests we need to set it manually
