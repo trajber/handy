@@ -1,7 +1,8 @@
 // Handy is a fast and simple HTTP multiplexer. It favors composition by
-// introducing the concept of interceptors, allowing you to reduce the logic
-// of your handler to a minimum specific part, whereas the common logic shared
-// by several handlers is implemented in many composable interceptors.
+// introducing the concept of interceptors (an implementation of the decorator
+// pattern), allowing you to reduce the logic of your handler to a minimum
+// specific part, whereas the common logic shared by several handlers is
+// implemented in many composable interceptors.
 //
 // In its most basic form, it allows the logic of your handler to be split by HTTP method:
 //
@@ -15,7 +16,7 @@
 //     }
 //
 //     type userHandler struct {
-//         handy.ProtoHandler
+//         handy.BaseHandler
 //     }
 //
 //     func (h *userHandler) Get() int {
@@ -41,7 +42,7 @@
 //     }
 //
 //     type userHandler struct {
-//         handy.ProtoHandler
+//         handy.BaseHandler
 //
 //         City string `urivar:"city"`
 //         Year int `urivar:"year"`
@@ -73,7 +74,13 @@ var CatchAllHandler http.Handler
 
 // Handy is the multiplexer of the framework.
 type Handy struct {
-	Recover func(interface{})
+	// Recover is called whenever a handler panics handling a request.
+	//
+	// If a handler panics at some point, the framework recovers from the
+	// panicked goroutine, answers with a http.StatusInternalServerError and,
+	// if the Recover function is set, it's called with any error value
+	// retrieved from the call of panic.
+	Recover func(err interface{})
 
 	mu     sync.RWMutex
 	router *router
@@ -86,6 +93,13 @@ func New() *Handy {
 	return handy
 }
 
+// Handle registers a handler to be called whenever a route matches.
+//
+// The route is in the format /a/{var1}/b/{var2}, where var1 and var2 are
+// variables that match anything and whose values are available to be inspected
+// in the URIVars field present in each handler and interceptor.
+// The handler argument is a constructor returning both a Handler and the
+// Interceptor that decorates it.
 func (handy *Handy) Handle(route string, handler func() (Handler, Interceptor)) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
@@ -95,6 +109,7 @@ func (handy *Handy) Handle(route string, handler func() (Handler, Interceptor)) 
 	}
 }
 
+// ServeHTTP makes Handy adheres to the standard http.Handler interface. As such, it can be used whenever a http.Handler is expected.
 func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	handy.mu.RLock()
 	defer handy.mu.RUnlock()

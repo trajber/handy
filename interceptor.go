@@ -1,10 +1,86 @@
 package handy
 
+// Interceptor is the way handy implements the decorator pattern.
+//
+// An interceptor decorates a handler and can execute custom actions before and
+// after it handles the request. It can also specifies other interceptors to
+// decorate itself, effectively building a nested structure of decorators.
+//
+// Suppose we have the following interceptors:
+//
+//     type A struct {
+//         ProtoInterceptor
+//     }
+//
+//     func NewA(previous Interceptor) *A {
+//         a := new(A)
+//         a.SetPrevious(previous)
+//         return a
+//     }
+//
+//     type B struct {
+//         ProtoInterceptor
+//     }
+//
+//     func NewB(previous Interceptor) *B {
+//         b := new(A)
+//         b.SetPrevious(previous)
+//         return b
+//     }
+//
+//     type C struct {
+//         ProtoInterceptor
+//     }
+//
+//     func NewC(previous Interceptor) *C {
+//         c := new(A)
+//         c.SetPrevious(previous)
+//         return c
+//     }
+//
+// And, for a particular scenario, we want to execute A first,
+// then B, then C. So we must write:
+//
+//     func NewHandler() (Handler, Interceptor) {
+//         a := NewA(nil)
+//         b := NewB(a)
+//         c := NewC(b)
+//         return new(SomeHandler), c
+//     }
+//
+// In such a setup, when a request arrives say, with a PUT method, the following
+// execution chain is performed:
+//
+//     a.Before, b.Before, c.Before, handler.Put, c.After, b.After, a.After
+//
+// If any of the interceptors' Before method returns a non-zero value, the
+// execution chain is interrupted and neither the subsequent interceptors nor
+// the handler are called. It's like having the following code:
+//
+//     result := a.Before()
+//
+//     if result == 0 {
+//         result = b.Before()
+//
+//         if result == 0 {
+//             result = c.Before()
+//
+//             if result == 0 {
+//                 result = handler.Put()
+//             }
+//
+//             result = c.After(result)
+//         }
+//
+//         result = b.After(result)
+//     }
+//
+//     a.After(result)
 type Interceptor interface {
 	Before() int
 	After(int) int
-	SetContext(Context)
 	SetPrevious(Interceptor)
+	SetContext(Context)
 	previous() Interceptor
 }
 
@@ -13,67 +89,6 @@ type Interceptor interface {
 type ProtoInterceptor struct {
 	Context
 
-	// Previous is set by the constructor of an interceptor as the interceptor
-	// to be executed just before it in the interceptor chain of execution.
-	//
-	// For instance, if we have the following interceptors:
-	//
-	//     type A struct {
-	//	       ProtoInterceptor
-	//     }
-	//
-	//     func NewA(previous Interceptor) *A {
-	//	       return &A{ Previous: previous }
-	//     }
-	//
-	//     type B struct {
-	//	       ProtoInterceptor
-	//     }
-	//
-	//     func NewB(previous Interceptor) *B {
-	//	       return &B{ Previous: previous }
-	//     }
-	//
-	//     type C struct {
-	//	       ProtoInterceptor
-	//     }
-	//
-	//     func NewC(previous Interceptor) *C {
-	//	       return &C{ Previous: previous }
-	//     }
-	//
-	// And, for a particular scenario, we want to execute A first,
-	// then B, then C, we must write:
-	//
-	//     func NewHandler() (Handler, Interceptor) {
-	//	       return &SomeHandler{}, NewC(NewB(NewA(nil)))
-	//     }
-	//
-	// This is usefull to enforce dependencies at the type level. Suppose
-	// that C, if included in the chain of execution, must always run
-	// after B has already run. In such a case, we can write:
-	//
-	//     func NewA(previous Interceptor) *A {
-	//	       return &A{ Previous: previous }
-	//     }
-	//
-	//	   func NewB(previous Interceptor) *B {
-	//	       return &B{ Previous: previous }
-	//     }
-	//
-	//     func NewC(previous &B) *C {
-	//         if previous == nil {
-	//             panic("Interceptor C must run after an interceptor B")
-	//         }
-	//
-	//	       return &C{ Previous: previous }
-	//     }
-	//
-	// And the type system garanties we can not run C if we haven't yet run B:
-	//
-	//     func NewHandler() (Handler, Interceptor) {
-	//	       return &SomeHandler{}, NewB(NewC(NewA(nil))) // <-- Doesn't compile!
-	//     }
 	previousInterceptor Interceptor
 }
 

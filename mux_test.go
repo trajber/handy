@@ -172,7 +172,7 @@ func (b *brokenAfterInterceptor) After(int) int {
 }
 
 type mockHandler struct {
-	handy.ProtoHandler
+	handy.BaseHandler
 
 	handleFunc   func() int
 	methodCalled string
