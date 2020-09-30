@@ -9,7 +9,7 @@ import (
 )
 
 type uriVarsHandler struct {
-	handy.ProtoHandler
+	handy.BaseHandler
 	interceptor.URIVarsAPI
 
 	S   string  `urivar:"s"`

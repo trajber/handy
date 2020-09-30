@@ -21,7 +21,7 @@ type IntrospectorAPI interface {
 }
 
 type introspector struct {
-	handy.ProtoInterceptor
+	handy.BaseInterceptor
 
 	fields structFields
 }

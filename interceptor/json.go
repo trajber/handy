@@ -18,7 +18,7 @@ type JSONCodecAPI interface {
 }
 
 type jsonCodec struct {
-	handy.ProtoInterceptor
+	handy.BaseInterceptor
 	IntrospectorAPI
 }
 

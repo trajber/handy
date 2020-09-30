@@ -12,7 +12,7 @@ import (
 )
 
 type queryStringHandler struct {
-	handy.ProtoHandler
+	handy.BaseHandler
 	interceptor.QueryStringAPI
 
 	request *http.Request

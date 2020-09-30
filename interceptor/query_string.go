@@ -14,7 +14,7 @@ type QueryStringAPI interface {
 }
 
 type queryString struct {
-	handy.ProtoInterceptor
+	handy.BaseInterceptor
 	IntrospectorAPI
 }
 

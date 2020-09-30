@@ -13,7 +13,7 @@ import (
 )
 
 type jsonHandler struct {
-	handy.ProtoHandler
+	handy.BaseHandler
 	interceptor.JSONCodecAPI
 
 	RequestData struct {

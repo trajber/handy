@@ -111,7 +111,7 @@ func newMockInterceptor(previous handy.Interceptor) MockInterceptor {
 }
 
 type mockInterceptor struct {
-	handy.ProtoInterceptor
+	handy.BaseInterceptor
 
 	beforeMethodCalled bool
 	afterMethodCalled  bool

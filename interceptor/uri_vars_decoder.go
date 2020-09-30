@@ -19,7 +19,7 @@ type URIVarsAPI interface {
 }
 
 type uriVars struct {
-	handy.ProtoInterceptor
+	handy.BaseInterceptor
 	IntrospectorAPI
 }
 

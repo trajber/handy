@@ -9,7 +9,7 @@ package handy
 // Suppose we have the following interceptors:
 //
 //     type A struct {
-//         ProtoInterceptor
+//         BaseInterceptor
 //     }
 //
 //     func NewA(previous Interceptor) *A {
@@ -19,7 +19,7 @@ package handy
 //     }
 //
 //     type B struct {
-//         ProtoInterceptor
+//         BaseInterceptor
 //     }
 //
 //     func NewB(previous Interceptor) *B {
@@ -29,7 +29,7 @@ package handy
 //     }
 //
 //     type C struct {
-//         ProtoInterceptor
+//         BaseInterceptor
 //     }
 //
 //     func NewC(previous Interceptor) *C {
@@ -84,31 +84,31 @@ type Interceptor interface {
 	previous() Interceptor
 }
 
-// ProtoInterceptor adds support for a struct to be used as an interceptor. It
+// BaseInterceptor adds support for a struct to be used as an interceptor. It
 // is expected to be embedded in all interceptors.
-type ProtoInterceptor struct {
+type BaseInterceptor struct {
 	Context
 
 	previousInterceptor Interceptor
 }
 
-func (i *ProtoInterceptor) Before() int {
+func (i *BaseInterceptor) Before() int {
 	return 0
 }
 
-func (i *ProtoInterceptor) After(status int) int {
+func (i *BaseInterceptor) After(status int) int {
 	return status
 }
 
-func (i *ProtoInterceptor) previous() Interceptor {
+func (i *BaseInterceptor) previous() Interceptor {
 	return i.previousInterceptor
 }
 
-func (i *ProtoInterceptor) SetPrevious(previous Interceptor) {
+func (i *BaseInterceptor) SetPrevious(previous Interceptor) {
 	i.previousInterceptor = previous
 }
 
-func (i *ProtoInterceptor) SetContext(c Context) {
+func (i *BaseInterceptor) SetContext(c Context) {
 	i.Context = c
 
 	// Recursively set context for all interceptors in the list
