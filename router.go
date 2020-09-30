@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	ErrRouteAlreadyExists = errors.New("Route already exists")
-	ErrCannotAppendRoute  = errors.New("Cannot append route")
-	ErrOnlyOneWildcard    = errors.New("Only one wildcard is allowed in this level")
+	errRouteAlreadyExists = errors.New("route already exists")
+	errCannotAppendRoute  = errors.New("cannot append route")
+	errOnlyOneWildcard    = errors.New("only one wildcard is allowed in this level")
 )
 
 type node struct {
@@ -77,12 +77,12 @@ func (r *router) appendRoute(uri string, h func() (Handler, Interceptor)) error 
 		}
 
 		if r.current.hasChildWildcard && !isWildcard(v) {
-			return ErrCannotAppendRoute
+			return errCannotAppendRoute
 		}
 
 		if n, ok := r.nodeExists(v); ok {
 			if i == len(tokens)-1 && n.handler != nil {
-				return ErrRouteAlreadyExists
+				return errRouteAlreadyExists
 
 			} else if i == len(tokens)-1 {
 				n.handler = h
@@ -100,7 +100,7 @@ func (r *router) appendRoute(uri string, h func() (Handler, Interceptor)) error 
 		// only one child wildcard per node
 		if isWildcard(v) {
 			if r.current.hasChildWildcard {
-				return ErrOnlyOneWildcard
+				return errOnlyOneWildcard
 			}
 
 			n.isWildcard = true
@@ -120,7 +120,7 @@ func (r *router) appendRoute(uri string, h func() (Handler, Interceptor)) error 
 	}
 
 	if appended == false {
-		return ErrCannotAppendRoute
+		return errCannotAppendRoute
 	}
 
 	return nil
