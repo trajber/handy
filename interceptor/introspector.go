@@ -1,3 +1,4 @@
+// Package interceptor provides some ready-to-use interceptors.
 package interceptor
 
 import (
