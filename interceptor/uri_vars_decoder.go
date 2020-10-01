@@ -5,11 +5,6 @@ import (
 	"net/http"
 )
 
-type uriVarsHandler interface {
-	URIVars() map[string]string
-	Field(string, string) interface{}
-}
-
 type URIVars interface {
 	Introspector
 }
