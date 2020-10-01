@@ -20,7 +20,8 @@ type Introspector interface {
 	IntrospectorAPI
 }
 
-// IntrospectorAPI is the API provided by Introspector to other interceptors.
+// IntrospectorAPI is the API provided by Introspector to be used by other
+// interceptors.
 type IntrospectorAPI interface {
 	// SetField sets a structure's field tagged in the format `tag:"value"`
 	// with the value in the data argument.
