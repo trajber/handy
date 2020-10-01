@@ -6,8 +6,8 @@ import (
 )
 
 // URIVars automatically converts Handy's URI variables into fields of the
-// provided struct. The struct is set via Introspector and thus, that
-// interceptor must be run before this one.
+// provided struct. The struct is set via Introspector and thus must be run
+// after that one.
 //
 // The struct's fields must be tagged in the format `urivars:"name"`, where
 // name is the name of the URI variable defined when registering the handler.

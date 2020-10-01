@@ -10,7 +10,7 @@ import (
 )
 
 // JSONCodec automatically handles marshaling and unmarshaling data. It uses
-// the API provided by Introspector to find fields of a struct tagged with a
+// the API provided by Introspector to find fields tagged with a
 // `request:"method"` or a `response:"method"` tag, where method can be any
 // combination of get, put, post, patch, delete separated by commas. It will
 // then unmarshal a request's body into the corresponding field or marshal the

@@ -5,10 +5,16 @@ import (
 	"net/http"
 )
 
+// QueryString sets fields of a struct from values of query string arguments.
+// The fields must be tagged in the following format: `query:"name"`, where
+// name is a query string parameter. It uses the API provided by Introspector
+// to find such fields, and thus must be run after that one.
 type QueryString interface {
 	Introspector
 }
 
+// QueryStringAPI is the API provided by QueryString to be used by other
+// interceptors.
 type QueryStringAPI interface {
 	IntrospectorAPI
 }
@@ -18,6 +24,9 @@ type queryString struct {
 	IntrospectorAPI
 }
 
+// NewQueryString creates a QueryString. It uses the API provided by
+// Introspector, and thus requires as argument any interceptor compatible with
+// the Introspector interface.
 func NewQueryString(previous Introspector) QueryString {
 	if previous == nil {
 		panic("QueryString's dependency can not be nil")
