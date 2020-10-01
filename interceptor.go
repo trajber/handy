@@ -113,6 +113,10 @@ func (i *BaseInterceptor) previous() Interceptor {
 	return i.previousInterceptor
 }
 
+// SetPrevious registers the provided interceptor as a decorator of the current
+// one. The framework, then, will arrange the execution chain as follows:
+//
+//     previous.Before, i.Before, handler.Method, i.After, previous.After.
 func (i *BaseInterceptor) SetPrevious(previous Interceptor) {
 	i.previousInterceptor = previous
 }
