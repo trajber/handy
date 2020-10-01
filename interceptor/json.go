@@ -9,10 +9,17 @@ import (
 	"strings"
 )
 
+// JSONCodec automatically handles marshaling and unmarshaling data. It uses
+// the API provided by Introspector to find fields of a struct tagged with a
+// `request:"method"` or a `response:"method"` tag, where method can be any
+// combination of get, put, post, patch, delete separated by commas. It will
+// then unmarshal a request's body into the corresponding field or marshal the
+// value found in the field into the response's body.
 type JSONCodec interface {
 	Introspector
 }
 
+// JSONCodecAPI is the API provided by JSONCodec to be used by other interceptors.
 type JSONCodecAPI interface {
 	IntrospectorAPI
 }
@@ -22,6 +29,9 @@ type jsonCodec struct {
 	IntrospectorAPI
 }
 
+// NewJSONCodec creates a JSONCodec. It uses the API provided by Introspector,
+// and thus requires as argument any interceptor compatible with the
+// Introspector interface.
 func NewJSONCodec(previous Introspector) JSONCodec {
 	if previous == nil {
 		panic("JSONCodec's dependency can not be nil")
