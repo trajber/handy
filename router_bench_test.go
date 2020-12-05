@@ -3,10 +3,10 @@ package handy
 import "testing"
 
 func BenchmarkFindRoute(b *testing.B) {
-	rt := NewRouter()
-	h := new(DefaultHandler)
-	err := rt.AppendRoute("/test/{x}", func() Handler {
-		return h
+	rt := newRouter()
+	h := new(BaseHandler)
+	err := rt.appendRoute("/test/{x}", func() (Handler, Interceptor) {
+		return h, nil
 	})
 
 	if err != nil {
@@ -16,9 +16,9 @@ func BenchmarkFindRoute(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := rt.Match("/test/foo")
-		if err != nil {
-			b.Fatal("Cannot find a valid route;", err)
+		route := rt.match("/test/foo")
+		if route == nil {
+			b.Fatal("Cannot find a valid route")
 		}
 	}
 }

@@ -6,15 +6,14 @@ import (
 )
 
 var (
-	ErrRouteNotFound      = errors.New("Router not found")
-	ErrRouteAlreadyExists = errors.New("Route already exists")
-	ErrCannotAppendRoute  = errors.New("Cannot append route")
-	ErrOnlyOneWildcard    = errors.New("Only one wildcard is allowed in this level")
+	errRouteAlreadyExists = errors.New("route already exists")
+	errCannotAppendRoute  = errors.New("cannot append route")
+	errOnlyOneWildcard    = errors.New("only one wildcard is allowed in this level")
 )
 
 type node struct {
 	name             string
-	handler          Constructor
+	handler          func() (Handler, Interceptor)
 	isWildcard       bool
 	hasChildWildcard bool
 	parent           *node
@@ -22,13 +21,13 @@ type node struct {
 	wildcardName     string
 }
 
-type Router struct {
+type router struct {
 	root    *node
 	current *node
 }
 
-func NewRouter() *Router {
-	r := new(Router)
+func newRouter() *router {
+	r := new(router)
 	root := new(node)
 	root.children = make(map[string]*node)
 	r.root = root
@@ -44,7 +43,7 @@ func cleanWildcard(l string) string {
 	return l[1 : len(l)-1]
 }
 
-func (r *Router) nodeExists(n string) (*node, bool) {
+func (r *router) nodeExists(n string) (*node, bool) {
 	v, ok := r.current.children[n]
 	if !ok && r.current.hasChildWildcard {
 		if isWildcard(n) {
@@ -57,7 +56,7 @@ func (r *Router) nodeExists(n string) (*node, bool) {
 	return v, ok
 }
 
-func (r *Router) AppendRoute(uri string, h Constructor) error {
+func (r *router) appendRoute(uri string, h func() (Handler, Interceptor)) error {
 	uri = strings.TrimSpace(uri)
 
 	// Make sure we are not appending the root ("/"), otherwise remove final slash
@@ -78,12 +77,12 @@ func (r *Router) AppendRoute(uri string, h Constructor) error {
 		}
 
 		if r.current.hasChildWildcard && !isWildcard(v) {
-			return ErrCannotAppendRoute
+			return errCannotAppendRoute
 		}
 
 		if n, ok := r.nodeExists(v); ok {
 			if i == len(tokens)-1 && n.handler != nil {
-				return ErrRouteAlreadyExists
+				return errRouteAlreadyExists
 
 			} else if i == len(tokens)-1 {
 				n.handler = h
@@ -101,7 +100,7 @@ func (r *Router) AppendRoute(uri string, h Constructor) error {
 		// only one child wildcard per node
 		if isWildcard(v) {
 			if r.current.hasChildWildcard {
-				return ErrOnlyOneWildcard
+				return errOnlyOneWildcard
 			}
 
 			n.isWildcard = true
@@ -121,7 +120,7 @@ func (r *Router) AppendRoute(uri string, h Constructor) error {
 	}
 
 	if appended == false {
-		return ErrCannotAppendRoute
+		return errCannotAppendRoute
 	}
 
 	return nil
@@ -138,17 +137,15 @@ func (n *node) findChild(name string) *node {
 	return v
 }
 
-type URIVars map[string]string
-
-type RouteMatch struct {
-	URIVars URIVars
-	Handler Constructor
+type routeMatch struct {
+	URIVars map[string]string
+	Handler func() (Handler, Interceptor)
 }
 
 // This method rebuilds a route based on a given URI
-func (r *Router) Match(uri string) (*RouteMatch, error) {
-	rt := new(RouteMatch)
-	rt.URIVars = make(URIVars)
+func (r *router) match(uri string) *routeMatch {
+	rt := new(routeMatch)
+	rt.URIVars = make(map[string]string)
 
 	current := r.current
 	uri = strings.TrimSpace(uri)
@@ -159,7 +156,7 @@ func (r *Router) Match(uri string) (*RouteMatch, error) {
 
 		n := current.findChild(v)
 		if n == nil {
-			return rt, ErrRouteNotFound
+			return nil
 		}
 
 		if n.isWildcard {
@@ -170,9 +167,9 @@ func (r *Router) Match(uri string) (*RouteMatch, error) {
 	}
 
 	if current.handler == nil {
-		return rt, ErrRouteNotFound
+		return nil
 	}
 
 	rt.Handler = current.handler
-	return rt, nil
+	return rt
 }

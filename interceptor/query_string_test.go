@@ -1,19 +1,18 @@
-package interceptor
+package interceptor_test
 
 import (
 	"errors"
 	"fmt"
+	"handy"
+	"handy/interceptor"
 	"net"
 	"net/http"
 	"net/url"
 	"testing"
-
-	"github.com/trajber/handy"
 )
 
-type mockQueryStringHandler struct {
-	handy.DefaultHandler
-	IntrospectorCompliant
+type queryStringHandler struct {
+	handy.BaseHandler
 
 	request *http.Request
 
@@ -37,10 +36,6 @@ type mockQueryStringHandler struct {
 	Custom  *customType `query:"custom"`
 }
 
-func (m mockQueryStringHandler) Req() *http.Request {
-	return m.request
-}
-
 type customType struct {
 	mockUnmarshalText func([]byte) error
 }
@@ -55,13 +50,13 @@ func TestQueryStringBefore(t *testing.T) {
 		queryString    string
 		request        *http.Request
 		customTypeMock customType
-		expected       mockQueryStringHandler
+		expected       queryStringHandler
 		expectedStatus int
 	}{
 		{
 			description: "it should parse the parameters to the correct types",
 			queryString: "s=Eita!&b=true&i=17&i8=18&i16=19&i32=20&i64=21&u=22&u8=23&u16=24&u32=25&u64=26&f32=27.1&f64=27.2&ip=192.168.0.1",
-			expected: mockQueryStringHandler{
+			expected: queryStringHandler{
 				S:      "Eita!",
 				B:      true,
 				I:      17,
@@ -109,7 +104,7 @@ func TestQueryStringBefore(t *testing.T) {
 					"novalue": []string{},
 				}),
 			},
-			expected: mockQueryStringHandler{
+			expected: queryStringHandler{
 				S: "Hello!",
 			},
 			expectedStatus: 0,
@@ -164,14 +159,18 @@ func TestQueryStringBefore(t *testing.T) {
 			request = item.request
 		}
 
-		handler := &mockQueryStringHandler{request: request}
+		handler := &queryStringHandler{request: request}
 		handler.Custom = &item.customTypeMock
+		intro := interceptor.NewIntrospector(nil, handler)
+		query := interceptor.NewQueryString(intro)
 
-		introspector := NewIntrospector(handler)
-		introspector.Before()
+		// The context is set automatically by the framework but on
+		// the tests we need to set it manually
+		ctx := handy.Context{Request: request}
+		handler.SetContext(ctx)
+		query.SetContext(ctx)
 
-		queryString := NewQueryString(handler)
-		status := queryString.Before()
+		status := query.Before()
 
 		if status != item.expectedStatus {
 			t.Errorf("Item %d, “%s”: mismatch HTTP status. Expecting “%d”; found “%d”", i, item.description, item.expectedStatus, status)

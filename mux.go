@@ -1,56 +1,116 @@
+// Handy is a fast and simple HTTP multiplexer. It favors composition by
+// introducing the concept of interceptors (an implementation of the decorator
+// pattern), allowing you to reduce the logic of your handler to a minimum
+// specific part, whereas the common logic shared by several handlers is
+// implemented in many composable interceptors.
+//
+// In its most basic form, it allows the logic of your handler to be split by HTTP method:
+//
+//     func main() {
+//         server := handy.New()
+//         server.Handle("/user/{username}", func() (handy.Handler, handy.Interceptor) {
+//             return &userHandler{}, nil
+//         })
+//
+//         http.ListenAndServe(":8181", server)
+//     }
+//
+//     type userHandler struct {
+//         handy.BaseHandler
+//     }
+//
+//     func (h *userHandler) Get() int {
+//         username := h.URIVars["username"]
+//         response := ...
+//         h.ResponseWriter.Write(...)
+//         return http.StatusOK
+//     }
+//
+// The true power comes when you plug interceptors into the pipeline:
+//
+//     func main() {
+//         server := handy.New()
+//         server.Handle("population/{city}/{year}", func() (handy.Handler, handy.Interceptor) {
+//             handler := new(userHandler)
+//             introspector := interceptor.NewIntrospector(nil, handler)
+//             uriVars := interceptor.NewURIVars(introspector)
+//             codec := interceptor.NewJSONCodec(uriVars)
+//             return handler, codec
+//         })
+//
+//         http.ListenAndServe(":8181", server)
+//     }
+//
+//     type userHandler struct {
+//         handy.BaseHandler
+//
+//         City string `urivar:"city"`
+//         Year int `urivar:"year"`
+//         Response Statistics `response:"get"`
+//     }
+//
+//     func (h *userHandler) Get() int {
+//         statistics := populationByCityAndYear(h.City, h.Year)
+//         h.Response = statistics
+//         return http.StatusOK
+//     }
+//
+// As you can see, interceptors can automatically parse URI variables and handle
+// marshaling and unmarshaling of requests and responses. And you can also
+// write your custom interceptors to do all sort of stuff, like database
+// transaction management and data validation.
 package handy
 
 import (
 	"fmt"
 	"net/http"
-	"reflect"
 	"sync"
-	"sync/atomic"
-	"time"
 )
 
-var (
-	ErrorFunc        = func(error) {}
-	NoMatchFunc      = func(http.ResponseWriter, *http.Request) {}
-	ProfilingEnabled = false
-	ProfileFunc      = func(string) {}
-)
+// CatchAllHandler, if defined, is called whenever a request is made for a route
+// without any registered handler. You can use it, for instance, to send custom
+// 404 responses.
+var CatchAllHandler http.Handler
 
+// Handy is the multiplexer of the framework.
 type Handy struct {
-	mu             sync.RWMutex
-	router         *Router
-	currentClients int32
-	CountClients   bool
-	Recover        func(interface{})
+	// Recover is called whenever a handler panics handling a request.
+	//
+	// If a handler panics at some point, the framework recovers from the
+	// panicked goroutine, answers with a http.StatusInternalServerError and,
+	// if the Recover function is set, it's called with any error value
+	// retrieved from the call of panic.
+	Recover func(err interface{})
+
+	mu     sync.RWMutex
+	router *router
 }
 
-type Constructor func() Handler
-
-func SetHandlerInfo(h Handler, w http.ResponseWriter, r *http.Request, u URIVars) {
-	h.setRequestInfo(w, r, u)
-}
-
-func NewHandy() *Handy {
+// New returns a new Handy multiplexer.
+func New() *Handy {
 	handy := new(Handy)
-	handy.router = NewRouter()
+	handy.router = newRouter()
 	return handy
 }
 
-func (handy *Handy) Handle(pattern string, h Constructor) {
+// Handle registers a handler to be called whenever a route matches.
+//
+// The route is in the format /a/{var1}/b/{var2}, where var1 and var2 are
+// variables that match anything and whose values are available to be inspected
+// in the URIVars field present in each handler and interceptor.
+// The handler argument is a constructor returning both a Handler and the
+// Interceptor that decorates it.
+func (handy *Handy) Handle(route string, handler func() (Handler, Interceptor)) {
 	handy.mu.Lock()
 	defer handy.mu.Unlock()
 
-	if err := handy.router.AppendRoute(pattern, h); err != nil {
-		panic("Cannot append route;" + err.Error())
+	if err := handy.router.appendRoute(route, handler); err != nil {
+		panic(fmt.Sprintf("cannot append route “%s”: %v", route, err.Error()))
 	}
 }
 
-func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if handy.CountClients {
-		atomic.AddInt32(&handy.currentClients, 1)
-		defer atomic.AddInt32(&handy.currentClients, -1)
-	}
-
+// ServeHTTP makes Handy adheres to the standard http.Handler interface. As such, it can be used whenever a http.Handler is expected.
+func (handy *Handy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	handy.mu.RLock()
 	defer handy.mu.RUnlock()
 
@@ -59,90 +119,62 @@ func (handy *Handy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if handy.Recover != nil {
 				handy.Recover(r)
 			}
-			w.WriteHeader(http.StatusInternalServerError)
+			writer.WriteHeader(http.StatusInternalServerError)
 		}
 	}()
 
-	route, err := handy.router.Match(r.URL.Path)
+	route := handy.router.match(request.URL.Path)
 
-	if err != nil {
-		if NoMatchFunc != nil {
-			NoMatchFunc(w, r)
+	if route == nil {
+		if CatchAllHandler != nil {
+			CatchAllHandler.ServeHTTP(writer, request)
 		} else {
-			// http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5
-			// The server has not found anything matching the Request-URI. No
-			// indication is given of whether the condition is temporary or
-			// permanent.
-			w.WriteHeader(http.StatusNotFound)
+			writer.WriteHeader(http.StatusNotFound)
 		}
 		return
 	}
 
-	h := route.Handler()
-	SetHandlerInfo(h, w, r, route.URIVars)
-	interceptors := h.Interceptors()
+	c := Context{ResponseWriter: writer, Request: request, URIVars: route.URIVars}
+	handler, interceptors := route.Handler()
+	handler.SetContext(c)
+	interceptors.SetContext(c)
+	chain := buildChain(interceptors)
+
 	var status int
 
-	var timeBefore time.Time
-	var elapsed float64
-	for k, interceptor := range interceptors {
-		if ProfilingEnabled {
-			timeBefore = time.Now()
-		}
+	// chain is in reverse order
+	for k := len(chain) - 1; k >= 0; k-- {
+		interceptor := chain[k]
 		status = interceptor.Before()
-		if ProfilingEnabled {
-			elapsed = time.Since(timeBefore).Seconds()
-			v := reflect.ValueOf(interceptor)
-			msg := fmt.Sprintf("Interceptor Before %s - %.4f", v.Elem().Type().Name(), elapsed)
-			ProfileFunc(msg)
-		}
-		// If the interceptor reported some status, interrupt the chain
+
+		// If the interceptor reports some status, interrupt the chain
 		if status != 0 {
-			interceptors = interceptors[:k+1]
+			chain = chain[k:]
 			goto write
 		}
 	}
 
-	if ProfilingEnabled {
-		timeBefore = time.Now()
-	}
-
-	switch r.Method {
-	case "GET":
-		status = h.Get()
-	case "POST":
-		status = h.Post()
-	case "PUT":
-		status = h.Put()
-	case "DELETE":
-		status = h.Delete()
-	case "PATCH":
-		status = h.Patch()
-	case "HEAD":
-		status = h.Head()
+	switch request.Method {
+	case http.MethodGet:
+		status = handler.Get()
+	case http.MethodPost:
+		status = handler.Post()
+	case http.MethodPut:
+		status = handler.Put()
+	case http.MethodDelete:
+		status = handler.Delete()
+	case http.MethodPatch:
+		status = handler.Patch()
+	case http.MethodHead:
+		status = handler.Head()
 	default:
 		status = http.StatusMethodNotAllowed
 	}
 
-	if ProfilingEnabled {
-		elapsed = time.Since(timeBefore).Seconds()
-		msg := fmt.Sprintf("%s %s - %.4f", r.Method, r.RequestURI, elapsed)
-		ProfileFunc(msg)
-	}
-
 write:
-	// executing all After interceptors in reverse order
-	for k := len(interceptors) - 1; k >= 0; k-- {
-		if ProfilingEnabled {
-			timeBefore = time.Now()
-		}
-		s := interceptors[k].After(status)
-		if ProfilingEnabled {
-			elapsed = time.Since(timeBefore).Seconds()
-			v := reflect.ValueOf(interceptors[k])
-			msg := fmt.Sprintf("Interceptor After %s - %.4f", v.Elem().Type().Name(), elapsed)
-			ProfileFunc(msg)
-		}
+	// executing all interceptors' After methods, in reverse order
+	for _, interceptor := range chain {
+		s := interceptor.After(status)
 
 		if s != 0 {
 			status = s
